@@ -11,8 +11,7 @@ import (
 	"strings"
 
 	"github.com/docker/cli/cli/config/configfile"
-	"github.com/docker/docker/api/types"
-
+	"github.com/docker/docker/api/types/registry"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -135,7 +134,7 @@ func New(version string) func() *schema.Provider {
 								Type:        schema.TypeBool,
 								Optional:    true,
 								Default:     false,
-								Description: "Setting this to `true` will tell the provider that this registry does not need authentication. Due to the docker internals, the provider will use dummy credentials (see https://github.com/kreuzwerker/terraform-provider-docker/issues/470 for more information). Defaults to `false`.",
+								Description: "Setting this to `true` will tell the provider that this registry does not need authentication. Due to the docker internals, the provider will use dummy credentials (see https://github.com/guru-terraform/terraform-provider-docker/issues/470 for more information). Defaults to `false`.",
 							},
 						},
 					},
@@ -217,17 +216,17 @@ func configure(version string, p *schema.Provider) func(context.Context, *schema
 // AuthConfigs represents authentication options to use for the
 // PushImage method accommodating the new X-Registry-Config header
 type AuthConfigs struct {
-	Configs map[string]types.AuthConfig `json:"configs"`
+	Configs map[string]registry.AuthConfig `json:"configs"`
 }
 
 // Take the given registry_auth schemas and return a map of registry auth configurations
 func providerSetToRegistryAuth(authList *schema.Set) (*AuthConfigs, error) {
 	authConfigs := AuthConfigs{
-		Configs: make(map[string]types.AuthConfig),
+		Configs: make(map[string]registry.AuthConfig),
 	}
 
 	for _, auth := range authList.List() {
-		authConfig := types.AuthConfig{}
+		authConfig := registry.AuthConfig{}
 		address := auth.(map[string]interface{})["address"].(string)
 		authConfig.ServerAddress = normalizeRegistryAddress(address)
 		registryHostname := convertToHostname(authConfig.ServerAddress)
@@ -236,7 +235,7 @@ func providerSetToRegistryAuth(authList *schema.Set) (*AuthConfigs, error) {
 		password := auth.(map[string]interface{})["password"].(string)
 
 		// If auth is disabled, set the auth config to any user/password combination
-		// See https://github.com/kreuzwerker/terraform-provider-docker/issues/470 for more information
+		// See https://github.com/guru-terraform/terraform-provider-docker/issues/470 for more information
 		if auth.(map[string]interface{})["auth_disabled"].(bool) {
 			log.Printf("[DEBUG] Auth disabled for registry %s", registryHostname)
 			username = "username"
@@ -313,7 +312,7 @@ func loadConfigFile(configData io.Reader) (*configfile.ConfigFile, error) {
 	if err := configFile.LoadFromReader(configData); err != nil {
 		log.Println("[DEBUG] Error parsing registry config: ", err)
 		log.Println("[DEBUG] Will try parsing from legacy format")
-		if err := configFile.LegacyLoadFromReader(configData); err != nil {
+		if err := configFile.LoadFromReader(configData); err != nil {
 			return nil, err
 		}
 	}

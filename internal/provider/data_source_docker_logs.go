@@ -3,7 +3,7 @@ package provider
 import (
 	"bufio"
 	"context"
-	"github.com/docker/docker/api/types"
+	container2 "github.com/docker/docker/api/types/container"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -88,7 +88,7 @@ func dataSourceDockerLogsRead(ctx context.Context, d *schema.ResourceData, meta 
 	d.SetId(container)
 
 	// call client for logs
-	readCloser, err := client.ContainerLogs(ctx, container, types.ContainerLogsOptions{
+	readCloser, err := client.ContainerLogs(ctx, container, container2.LogsOptions{
 		ShowStdout: d.Get("show_stdout").(bool),
 		ShowStderr: d.Get("show_stderr").(bool),
 		Since:      d.Get("since").(string),

@@ -811,7 +811,7 @@ func resourceDockerContainer() *schema.Resource {
 						},
 						"content_base64": {
 							Type:             schema.TypeString,
-							Description:      "Base64-encoded data that will be decoded and uploaded as raw bytes for the object content. This allows safely uploading non-UTF8 binary data, but is recommended only for larger binary content such as the result of the `base64encode` interpolation function. See [here](https://github.com/terraform-providers/terraform-provider-docker/issues/48#issuecomment-374174588) for the reason. Conflicts with `content` & `source`",
+							Description:      "Base64-encoded data that will be decoded and uploaded as raw bytes for the object content. This allows safely uploading non-UTF8 binary data, but is recommended only for larger binary content such as the result of the `base64encode` interpolation function. See [here](https://github.com/guru-terraform/docker-provider/issues/48#issuecomment-374174588) for the reason. Conflicts with `content` & `source`",
 							Optional:         true,
 							ForceNew:         true,
 							ValidateDiagFunc: validateStringIsBase64Encoded(),

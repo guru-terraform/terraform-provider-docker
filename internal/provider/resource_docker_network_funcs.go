@@ -25,13 +25,13 @@ const (
 func resourceDockerNetworkCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 
-	createOpts := types.NetworkCreate{}
+	createOpts := network.CreateOptions{}
 	if v, ok := d.GetOk("labels"); ok {
 		createOpts.Labels = labelSetToMap(v.(*schema.Set))
 	}
-	if v, ok := d.GetOk("check_duplicate"); ok {
-		createOpts.CheckDuplicate = v.(bool)
-	}
+	//if v, ok := d.GetOk("check_duplicate"); ok {
+	//	createOpts.CheckDuplicate = v.(bool)
+	//}
 	if v, ok := d.GetOk("driver"); ok {
 		createOpts.Driver = v.(string)
 	}
@@ -48,7 +48,8 @@ func resourceDockerNetworkCreate(ctx context.Context, d *schema.ResourceData, me
 		createOpts.Ingress = v.(bool)
 	}
 	if v, ok := d.GetOk("ipv6"); ok {
-		createOpts.EnableIPv6 = v.(bool)
+		bv := v.(bool)
+		createOpts.EnableIPv6 = &bv
 	}
 
 	ipamOpts := &network.IPAM{}
