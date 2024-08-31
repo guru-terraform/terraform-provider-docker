@@ -1600,7 +1600,7 @@ func TestAccDockerContainer_dualstackaddress(t *testing.T) {
 // /////////
 // HELPERS
 // /////////
-func testAccContainerRunning(resourceName string, container *types.ContainerJSON) resource.TestCheckFunc {
+func testAccContainerRunning(resourceName string, cont *types.ContainerJSON) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[resourceName]
@@ -1613,7 +1613,7 @@ func testAccContainerRunning(resourceName string, container *types.ContainerJSON
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
-		containers, err := client.ContainerList(ctx, types.ContainerListOptions{})
+		containers, err := client.ContainerList(ctx, container.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -1624,7 +1624,7 @@ func testAccContainerRunning(resourceName string, container *types.ContainerJSON
 				if err != nil {
 					return fmt.Errorf("Container could not be inspected: %s", err)
 				}
-				*container = inspected
+				*cont = inspected
 				return nil
 			}
 		}
@@ -1633,7 +1633,7 @@ func testAccContainerRunning(resourceName string, container *types.ContainerJSON
 	}
 }
 
-func testAccContainerNotRunning(n string, container *types.ContainerJSON) resource.TestCheckFunc {
+func testAccContainerNotRunning(n string, cont *types.ContainerJSON) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[n]
@@ -1646,7 +1646,7 @@ func testAccContainerNotRunning(n string, container *types.ContainerJSON) resour
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
-		containers, err := client.ContainerList(ctx, types.ContainerListOptions{
+		containers, err := client.ContainerList(ctx, container.ListOptions{
 			All: true,
 		})
 		if err != nil {
@@ -1659,9 +1659,9 @@ func testAccContainerNotRunning(n string, container *types.ContainerJSON) resour
 				if err != nil {
 					return fmt.Errorf("Container could not be inspected: %s", err)
 				}
-				*container = inspected
+				*cont = inspected
 
-				if container.State.Running {
+				if cont.State.Running {
 					return fmt.Errorf("Container is running: %s", rs.Primary.ID)
 				}
 			}

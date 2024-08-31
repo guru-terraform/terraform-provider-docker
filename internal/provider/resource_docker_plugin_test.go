@@ -211,8 +211,9 @@ func Test_getDockerPluginGrantPermissions(t *testing.T) {
 		d := d
 		t.Run(d.title, func(t *testing.T) {
 			t.Parallel()
+			ctx := context.Background()
 			f := getDockerPluginGrantPermissions(d.src)
-			b, err := f(d.privileges)
+			b, err := f(ctx, d.privileges)
 			if d.isErr {
 				if err == nil {
 					t.Fatal("error must be returned")
