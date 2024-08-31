@@ -296,7 +296,7 @@ func deleteDockerRegistryImage(pushOpts internalPushImageOptions, registryWithPr
 	// Either OAuth is required or the basic auth creds were invalid
 	case http.StatusUnauthorized:
 		if !strings.HasPrefix(resp.Header.Get("www-authenticate"), "Bearer") {
-			return fmt.Errorf("Bad credentials: " + resp.Status)
+			return fmt.Errorf("Bad credentials: %s", resp.Status)
 		}
 
 		token, err := getAuthToken(resp.Header.Get("www-authenticate"), username, password, client)
@@ -313,11 +313,11 @@ func deleteDockerRegistryImage(pushOpts internalPushImageOptions, registryWithPr
 		case http.StatusOK, http.StatusAccepted, http.StatusNotFound:
 			return nil
 		default:
-			return fmt.Errorf("Got bad response from registry: " + resp.Status)
+			return fmt.Errorf("Got bad response from registry: %s", resp.Status)
 		}
 		// Some unexpected status was given, return an error
 	default:
-		return fmt.Errorf("Got bad response from registry: " + resp.Status)
+		return fmt.Errorf("Got bad response from registry: %s", resp.Status)
 	}
 }
 

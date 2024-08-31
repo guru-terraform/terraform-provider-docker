@@ -1007,7 +1007,7 @@ func TestAccDockerContainer_device(t *testing.T) {
 	testCheck := func(*terraform.State) error {
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 
-		createExecOpts := types.ExecConfig{
+		createExecOpts := container.ExecOptions{
 			Cmd: []string{"dd", "if=/dev/zero_test", "of=/tmp/test.txt", "count=10", "bs=1"},
 		}
 
@@ -1016,7 +1016,7 @@ func TestAccDockerContainer_device(t *testing.T) {
 			return fmt.Errorf("Unable to create a exec instance on container: %s", err)
 		}
 
-		startExecOpts := types.ExecStartCheck{}
+		startExecOpts := container.ExecStartOptions{}
 		if err := client.ContainerExecStart(ctx, exec.ID, startExecOpts); err != nil {
 			return fmt.Errorf("Unable to run exec a instance on container: %s", err)
 		}

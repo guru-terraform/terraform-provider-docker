@@ -400,7 +400,7 @@ func prepareBuildContext(specifiedContext string, specifiedDockerfile string) (i
 		return nil, "", err
 	}
 
-	specifiedDockerfile = archive.CanonicalTarNameForPath(specifiedDockerfile)
+	specifiedDockerfile = filepath.ToSlash(specifiedDockerfile)
 	excludes = build.TrimBuildFilesFromExcludes(excludes, specifiedDockerfile, false)
 	log.Printf("[DEBUG] Excludes: %v", excludes)
 	buildCtx := getBuildContext(contextDir, excludes)

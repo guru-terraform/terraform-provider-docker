@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"log"
 	"os"
 	"strings"
@@ -23,7 +24,6 @@ import (
 	"github.com/docker/go-connections/nat"
 	"github.com/docker/go-units"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -482,7 +482,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 
 			dstPath := "/"
 			uploadContent := bytes.NewReader(buf.Bytes())
-			options := types.CopyToContainerOptions{}
+			options := container.CopyToContainerOptions{}
 			if err := client.CopyToContainer(ctx, retContainer.ID, dstPath, uploadContent, options); err != nil {
 				return diag.Errorf("Unable to upload volume content: %s", err)
 			}
@@ -602,7 +602,7 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 		return nil
 	}
 
-	stateConf := &resource.StateChangeConf{
+	stateConf := &retry.StateChangeConf{
 		Pending:    []string{"pending"},
 		Target:     []string{"running"},
 		Refresh:    resourceDockerContainerReadRefreshFunc(ctx, d, meta),
@@ -765,7 +765,7 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 }
 
 func resourceDockerContainerReadRefreshFunc(ctx context.Context,
-	d *schema.ResourceData, meta interface{}) resource.StateRefreshFunc {
+	d *schema.ResourceData, meta interface{}) retry.StateRefreshFunc {
 	return func() (interface{}, string, error) {
 		client := meta.(*ProviderConfig).DockerClient
 		containerID := d.Id()
