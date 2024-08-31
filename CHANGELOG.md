@@ -269,7 +269,7 @@
 
 * Correctly handle build files and context for docker_registry_image ([#398](https://github.com/guru-terraform/terraform-provider-docker/issues/398))
 * Switch to proper go tools mechanism to fix website-* workflows. ([#399](https://github.com/guru-terraform/terraform-provider-docker/issues/399))
-* compare relative paths when excluding, fixes kreuzwerker[#280](https://github.com/guru-terraform/terraform-provider-docker/issues/280) ([#397](https://github.com/guru-terraform/terraform-provider-docker/issues/397))
+* compare relative paths when excluding, fixes guru-terraform[#280](https://github.com/guru-terraform/terraform-provider-docker/issues/280) ([#397](https://github.com/guru-terraform/terraform-provider-docker/issues/397))
 
 
 <a name="v2.17.0"></a>
@@ -480,8 +480,8 @@
 
 ### Pull Requests
 
-* Merge pull request [#38](https://github.com/guru-terraform/terraform-provider-docker/issues/38) from kreuzwerker/ci-ubuntu2004-workflow
-* Merge pull request [#36](https://github.com/guru-terraform/terraform-provider-docker/issues/36) from kreuzwerker/chore-gh-issue-tpl
+* Merge pull request [#38](https://github.com/guru-terraform/terraform-provider-docker/issues/38) from guru-terraform/ci-ubuntu2004-workflow
+* Merge pull request [#36](https://github.com/guru-terraform/terraform-provider-docker/issues/36) from guru-terraform/chore-gh-issue-tpl
 
 
 <a name="v2.9.0"></a>
@@ -525,7 +525,7 @@
 
 * Merge pull request [#33](https://github.com/guru-terraform/terraform-provider-docker/issues/33) from brandonros/patch-1
 * Merge pull request [#11](https://github.com/guru-terraform/terraform-provider-docker/issues/11) from suzuki-shunsuke/format-with-gofumpt
-* Merge pull request [#26](https://github.com/guru-terraform/terraform-provider-docker/issues/26) from kreuzwerker/ci/fix-website-ci
+* Merge pull request [#26](https://github.com/guru-terraform/terraform-provider-docker/issues/26) from guru-terraform/ci/fix-website-ci
 * Merge pull request [#8](https://github.com/guru-terraform/terraform-provider-docker/issues/8) from dubo-dubon-duponey/patch1
 
 

@@ -4,15 +4,15 @@
 <a href="https://terraform.io">
     <img src="https://raw.githubusercontent.com/guru-terraform/terraform-provider-docker/master/assets/terraform-logo.png" alt="Terraform logo" title="Terraform" align="right" height="100" />
 </a>
-<a href="https://kreuzwerker.de">
-    <img src="https://raw.githubusercontent.com/guru-terraform/terraform-provider-docker/master/assets/xw-logo.png" alt="Kreuzwerker logo" title="Kreuzwerker" align="right" height="100" />
+<a href="https://guru-terraform.de">
+    <img src="https://raw.githubusercontent.com/guru-terraform/terraform-provider-docker/master/assets/xw-logo.png" alt="guru-terraform logo" title="guru-terraform" align="right" height="100" />
 </a>
 
 # Terraform Provider for Docker
 
 [![Release](https://img.shields.io/github/v/release/guru-terraform/terraform-provider-docker)](https://github.com/guru-terraform/terraform-provider-docker/releases)
-[![Installs](https://img.shields.io/badge/dynamic/json?logo=terraform&label=installs&query=$.data.attributes.downloads&url=https%3A%2F%2Fregistry.terraform.io%2Fv2%2Fproviders%2F713)](https://registry.terraform.io/providers/kreuzwerker/docker)
-[![Registry](https://img.shields.io/badge/registry-doc%40latest-lightgrey?logo=terraform)](https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs)
+[![Installs](https://img.shields.io/badge/dynamic/json?logo=terraform&label=installs&query=$.data.attributes.downloads&url=https%3A%2F%2Fregistry.terraform.io%2Fv2%2Fproviders%2F713)](https://registry.terraform.io/providers/guru-terraform/docker)
+[![Registry](https://img.shields.io/badge/registry-doc%40latest-lightgrey?logo=terraform)](https://registry.terraform.io/providers/guru-terraform/docker/latest/docs)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/guru-terraform/terraform-provider-docker/blob/main/LICENSE)  
 [![Go Status](https://github.com/guru-terraform/terraform-provider-docker/workflows/Acc%20Tests/badge.svg)](https://github.com/guru-terraform/terraform-provider-docker/actions)
 [![Lint Status](https://github.com/guru-terraform/terraform-provider-docker/workflows/golangci-lint/badge.svg)](https://github.com/guru-terraform/terraform-provider-docker/actions)
@@ -20,13 +20,13 @@
 
 ## Documentation
 
-The documentation for the provider is available on the [Terraform Registry](https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs).
+The documentation for the provider is available on the [Terraform Registry](https://registry.terraform.io/providers/guru-terraform/docker/latest/docs).
 
 Do you want to migrate from `v2.x` to `v3.x`? Please read the [migration guide](docs/v2_v3_migration.md)
 
 ## Example usage
 
-Take a look at the examples in the [documentation](https://registry.terraform.io/providers/kreuzwerker/docker/3.0.2/docs) of the registry
+Take a look at the examples in the [documentation](https://registry.terraform.io/providers/guru-terraform/docker/3.0.2/docs) of the registry
 or use the following example:
 
 
@@ -37,7 +37,7 @@ terraform {
     # We recommend pinning to the specific version of the Docker Provider you're using
     # since new versions are released frequently
     docker = {
-      source  = "kreuzwerker/docker"
+      source  = "guru-terraform/docker"
       version = "3.0.2"
     }
   }
