@@ -2,7 +2,7 @@ terraform {
   required_providers {
     docker = {
       source  = "guru-terraform/docker"
-      version = "3.0.2"
+      version = "3.0.9"
     }
   }
 }

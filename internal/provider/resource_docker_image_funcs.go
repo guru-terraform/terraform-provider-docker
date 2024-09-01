@@ -32,20 +32,20 @@ import (
 const minBuildkitDockerVersion = "1.39"
 
 func resourceDockerImageCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 	imageName := d.Get("name").(string)
 
 	if value, ok := d.GetOk("build"); ok {
 		for _, rawBuild := range value.(*schema.Set).List() {
 			rawBuild := rawBuild.(map[string]interface{})
 
-			err := buildDockerImage(ctx, rawBuild, imageName, client)
+			err := buildDockerImage(ctx, rawBuild, imageName, cli)
 			if err != nil {
 				return diag.FromErr(err)
 			}
 		}
 	}
-	apiImage, err := findImage(ctx, imageName, client, meta.(*ProviderConfig).AuthConfigs, d.Get("platform").(string))
+	apiImage, err := findImage(ctx, imageName, cli, meta.(*ProviderConfig).AuthConfigs, d.Get("platform").(string))
 	if err != nil {
 		return diag.Errorf("Unable to read Docker image into resource: %s", err)
 	}
@@ -55,9 +55,9 @@ func resourceDockerImageCreate(ctx context.Context, d *schema.ResourceData, meta
 }
 
 func resourceDockerImageRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 	var data Data
-	if err := fetchLocalImages(ctx, &data, client); err != nil {
+	if err := fetchLocalImages(ctx, &data, cli); err != nil {
 		return diag.Errorf("Error reading docker image list: %s", err)
 	}
 	for id := range data.DockerImages {
@@ -66,7 +66,7 @@ func resourceDockerImageRead(ctx context.Context, d *schema.ResourceData, meta i
 
 	imageName := d.Get("name").(string)
 
-	foundImage, err := searchLocalImages(ctx, client, data, imageName)
+	foundImage, err := searchLocalImages(ctx, cli, data, imageName)
 	if err != nil {
 		return diag.Errorf("resourceDockerImageRead: error looking up local image %q: %s", imageName, err)
 	}
@@ -88,9 +88,9 @@ func resourceDockerImageRead(ctx context.Context, d *schema.ResourceData, meta i
 func resourceDockerImageUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	// We need to re-read in case switching parameters affects
 	// the value of "latest" or others
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 	imageName := d.Get("name").(string)
-	_, err := findImage(ctx, imageName, client, meta.(*ProviderConfig).AuthConfigs, d.Get("platform").(string))
+	_, err := findImage(ctx, imageName, cli, meta.(*ProviderConfig).AuthConfigs, d.Get("platform").(string))
 	if err != nil {
 		return diag.Errorf("Unable to read Docker image into resource: %s", err)
 	}
@@ -99,9 +99,9 @@ func resourceDockerImageUpdate(ctx context.Context, d *schema.ResourceData, meta
 }
 
 func resourceDockerImageDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 	// TODO mavogel: add retries. see e.g. service updateFailsAndRollbackConvergeConfig test
-	err := removeImage(ctx, d, client)
+	err := removeImage(ctx, d, cli)
 	if err != nil {
 		return diag.Errorf("Unable to remove Docker image: %s", err)
 	}
@@ -180,13 +180,13 @@ func fetchLocalImages(ctx context.Context, data *Data, client *client.Client) er
 	// Docker uses different nomenclatures in different places...sometimes a short
 	// ID, sometimes long, etc. So we store both in the map so we can always find
 	// the same image object. We store the tags and digests, too.
-	for i, image := range images {
-		data.DockerImages[image.ID[:12]] = &images[i]
-		data.DockerImages[image.ID] = &images[i]
-		for _, repotag := range image.RepoTags {
+	for i, img := range images {
+		data.DockerImages[img.ID[:12]] = &images[i]
+		data.DockerImages[img.ID] = &images[i]
+		for _, repotag := range img.RepoTags {
 			data.DockerImages[repotag] = &images[i]
 		}
-		for _, repodigest := range image.RepoDigests {
+		for _, repodigest := range img.RepoDigests {
 			data.DockerImages[repodigest] = &images[i]
 		}
 	}

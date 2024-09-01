@@ -58,7 +58,7 @@ func buildHTTPClientFromBytes(caPEMCert, certPEMBlock, keyPEMBlock []byte) (*htt
 // http.DefaultTransport, but with idle connections and keepalives disabled.
 func defaultTransport() *http.Transport {
 	transport := defaultPooledTransport()
-	transport.DisableKeepAlives = true
+	transport.DisableKeepAlives = false
 	transport.MaxIdleConnsPerHost = -1
 	return transport
 }
@@ -69,14 +69,14 @@ func defaultPooledTransport() *http.Transport {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
+			Timeout:   3000 * time.Second,
+			KeepAlive: 3000 * time.Second,
 		}).DialContext,
 		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
+		IdleConnTimeout:       1900 * time.Second,
+		TLSHandshakeTimeout:   1000 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		MaxIdleConnsPerHost:   runtime.GOMAXPROCS(0) + 1,
+		MaxIdleConnsPerHost:   runtime.GOMAXPROCS(0) + 2,
 	}
 	return transport
 }

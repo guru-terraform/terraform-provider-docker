@@ -47,10 +47,10 @@ var creationTime time.Time
 
 func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
 	var err error
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 	authConfigs := meta.(*ProviderConfig).AuthConfigs
 	image := d.Get("image").(string)
-	_, err = findImage(ctx, image, client, authConfigs, "")
+	_, err = findImage(ctx, image, cli, authConfigs, "")
 	if err != nil {
 		return diag.Errorf("Unable to create container with image %s: %s", image, err)
 	}
@@ -345,7 +345,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 		hostConfig.GroupAdd = stringSetToStringSlice(v.(*schema.Set))
 	}
 	if v, ok := d.GetOk("gpus"); ok {
-		if client.ClientVersion() >= "1.40" {
+		if cli.ClientVersion() >= "1.40" {
 			var gpu opts.GpuOpts
 			err := gpu.Set(v.(string))
 			if err != nil {
@@ -358,7 +358,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("cgroupns_mode"); ok {
-		if client.ClientVersion() >= "1.41" {
+		if cli.ClientVersion() >= "1.41" {
 			cgroupnsMode := container.CgroupnsMode(v.(string))
 			if !cgroupnsMode.Valid() {
 				return diag.Errorf("cgroupns_mode: invalid CGROUP mode, must be either 'private', 'host' or empty")
@@ -380,7 +380,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	var retContainer container.CreateResponse
 
 	// TODO mavogel add platform later which comes from API v1.41. Currently we pass nil
-	if retContainer, err = client.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, d.Get("name").(string)); err != nil {
+	if retContainer, err = cli.ContainerCreate(ctx, config, hostConfig, networkingConfig, nil, d.Get("name").(string)); err != nil {
 		return diag.Errorf("Unable to create container: %s", err)
 	}
 	log.Printf("[INFO] retContainer %#v", retContainer)
@@ -388,7 +388,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 
 	// But overwrite them with the future ones, if set
 	if v, ok := d.GetOk("networks_advanced"); ok {
-		if err := client.NetworkDisconnect(ctx, "bridge", retContainer.ID, false); err != nil {
+		if err := cli.NetworkDisconnect(ctx, "bridge", retContainer.ID, false); err != nil {
 			if !containsIgnorableErrorMessage(err.Error(), "is not connected to the network bridge") {
 				return diag.Errorf("Unable to disconnect the default network: %s", err)
 			}
@@ -410,7 +410,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 			}
 			endpointConfig.IPAMConfig = endpointIPAMConfig
 
-			if err := client.NetworkConnect(ctx, networkID, retContainer.ID, endpointConfig); err != nil {
+			if err := cli.NetworkConnect(ctx, networkID, retContainer.ID, endpointConfig); err != nil {
 				return diag.Errorf("Unable to connect to network '%s': %s", networkID, err)
 			}
 		}
@@ -483,7 +483,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 			dstPath := "/"
 			uploadContent := bytes.NewReader(buf.Bytes())
 			options := container.CopyToContainerOptions{}
-			if err := client.CopyToContainer(ctx, retContainer.ID, dstPath, uploadContent, options); err != nil {
+			if err := cli.CopyToContainer(ctx, retContainer.ID, dstPath, uploadContent, options); err != nil {
 				return diag.Errorf("Unable to upload volume content: %s", err)
 			}
 		}
@@ -492,14 +492,14 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	if d.Get("start").(bool) {
 		creationTime = time.Now()
 		options := container.StartOptions{}
-		if err := client.ContainerStart(ctx, retContainer.ID, options); err != nil {
+		if err := cli.ContainerStart(ctx, retContainer.ID, options); err != nil {
 			return diag.Errorf("Unable to start container: %s", err)
 		}
 
 		if d.Get("wait").(bool) {
 			waitForHealthyState := func(result chan<- error) {
 				for {
-					infos, err := client.ContainerInspect(ctx, retContainer.ID)
+					infos, err := cli.ContainerInspect(ctx, retContainer.ID)
 					if err != nil {
 						result <- fmt.Errorf("error inspecting container state: %s", err)
 					}
@@ -537,7 +537,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 		if d.Get("logs").(bool) {
 			go func() {
 				defer func() { logsRead <- true }()
-				reader, err := client.ContainerLogs(ctx, retContainer.ID, container.LogsOptions{
+				reader, err := cli.ContainerLogs(ctx, retContainer.ID, container.LogsOptions{
 					ShowStdout: true,
 					ShowStderr: true,
 					Follow:     true,
@@ -562,7 +562,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 			}()
 		}
 
-		attachCh, errAttachCh := client.ContainerWait(ctx, retContainer.ID, container.WaitConditionNotRunning)
+		attachCh, errAttachCh := cli.ContainerWait(ctx, retContainer.ID, container.WaitConditionNotRunning)
 		select {
 		case err := <-errAttachCh:
 			if err != nil {
@@ -590,9 +590,9 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 		containerReadRefreshTimeoutMilliseconds = containerReadRefreshTimeoutMillisecondsDefault
 	}
 	log.Printf("[INFO] Waiting for container: '%s' to run: max '%v seconds'", d.Id(), containerReadRefreshTimeoutMilliseconds/1000)
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 
-	apiContainer, err := fetchDockerContainer(ctx, d.Id(), client)
+	apiContainer, err := fetchDockerContainer(ctx, d.Id(), cli)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -625,85 +625,85 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 
-	container := containerRaw.(types.ContainerJSON)
-	jsonObj, _ := json.MarshalIndent(container, "", "\t")
+	cont := containerRaw.(types.ContainerJSON)
+	jsonObj, _ := json.MarshalIndent(cont, "", "\t")
 	log.Printf("[DEBUG] Docker container inspect from stateFunc: %s", jsonObj)
 
-	if !container.State.Running && d.Get("must_run").(bool) {
+	if !cont.State.Running && d.Get("must_run").(bool) {
 		if err := resourceDockerContainerDelete(ctx, d, meta); err != nil {
-			log.Printf("[ERROR] Container %s failed to be deleted: %v", container.ID, err)
+			log.Printf("[ERROR] Container %s failed to be deleted: %v", cont.ID, err)
 			return err
 		}
-		log.Printf("[ERROR] Container %s failed to be in running state", container.ID)
+		log.Printf("[ERROR] Container %s failed to be in running state", cont.ID)
 		return diag.FromErr(errContainerFailedToBeInRunningState)
 	}
 
-	if !container.State.Running {
-		d.Set("exit_code", container.State.ExitCode)
+	if !cont.State.Running {
+		d.Set("exit_code", cont.State.ExitCode)
 	}
 
 	// Read Network Settings
-	if container.NetworkSettings != nil {
-		d.Set("bridge", container.NetworkSettings.Bridge)
-		if err := d.Set("ports", flattenContainerPorts(container.NetworkSettings.Ports)); err != nil {
+	if cont.NetworkSettings != nil {
+		d.Set("bridge", cont.NetworkSettings.Bridge)
+		if err := d.Set("ports", flattenContainerPorts(cont.NetworkSettings.Ports)); err != nil {
 			log.Printf("[WARN] failed to set ports from API: %s", err)
 		}
-		if err := d.Set("network_data", flattenContainerNetworks(container.NetworkSettings)); err != nil {
+		if err := d.Set("network_data", flattenContainerNetworks(cont.NetworkSettings)); err != nil {
 			log.Printf("[WARN] failed to set network settings from API: %s", err)
 		}
 	}
 
 	// TODO all the other attributes
-	d.SetId(container.ID)
-	d.Set("name", strings.TrimLeft(container.Name, "/")) // api prefixes with '/' ...
-	d.Set("rm", container.HostConfig.AutoRemove)
-	d.Set("read_only", container.HostConfig.ReadonlyRootfs)
+	d.SetId(cont.ID)
+	d.Set("name", strings.TrimLeft(cont.Name, "/")) // api prefixes with '/' ...
+	d.Set("rm", cont.HostConfig.AutoRemove)
+	d.Set("read_only", cont.HostConfig.ReadonlyRootfs)
 	// "start" can't be imported
 	// attach
 	// logs
 	// "must_run" can't be imported
 	// container_logs
-	d.Set("image", container.Image)
-	d.Set("hostname", container.Config.Hostname)
-	d.Set("domainname", container.Config.Domainname)
-	d.Set("command", container.Config.Cmd)
-	d.Set("entrypoint", container.Config.Entrypoint)
-	d.Set("user", container.Config.User)
-	d.Set("dns", container.HostConfig.DNS)
-	d.Set("dns_opts", container.HostConfig.DNSOptions)
-	d.Set("security_opts", container.HostConfig.SecurityOpt)
-	d.Set("dns_search", container.HostConfig.DNSSearch)
-	d.Set("publish_all_ports", container.HostConfig.PublishAllPorts)
-	d.Set("restart", container.HostConfig.RestartPolicy.Name)
-	d.Set("max_retry_count", container.HostConfig.RestartPolicy.MaximumRetryCount)
+	d.Set("image", cont.Image)
+	d.Set("hostname", cont.Config.Hostname)
+	d.Set("domainname", cont.Config.Domainname)
+	d.Set("command", cont.Config.Cmd)
+	d.Set("entrypoint", cont.Config.Entrypoint)
+	d.Set("user", cont.Config.User)
+	d.Set("dns", cont.HostConfig.DNS)
+	d.Set("dns_opts", cont.HostConfig.DNSOptions)
+	d.Set("security_opts", cont.HostConfig.SecurityOpt)
+	d.Set("dns_search", cont.HostConfig.DNSSearch)
+	d.Set("publish_all_ports", cont.HostConfig.PublishAllPorts)
+	d.Set("restart", cont.HostConfig.RestartPolicy.Name)
+	d.Set("max_retry_count", cont.HostConfig.RestartPolicy.MaximumRetryCount)
 
 	// From what I can tell Init being nullable is only for container creation to allow
 	// dockerd to default it to the daemons own default settings. So this != nil
 	// check is most likely not ever going to fail. In the event that it does the
 	// "init" value will be set to false as there isn't much else we can do about it.
-	if container.HostConfig.Init != nil {
-		d.Set("init", *container.HostConfig.Init)
+	if cont.HostConfig.Init != nil {
+		d.Set("init", *cont.HostConfig.Init)
 	} else {
 		d.Set("init", false)
 	}
-	d.Set("working_dir", container.Config.WorkingDir)
-	if len(container.HostConfig.CapAdd) > 0 || len(container.HostConfig.CapDrop) > 0 {
+	d.Set("working_dir", cont.Config.WorkingDir)
+	if len(cont.HostConfig.CapAdd) > 0 || len(cont.HostConfig.CapDrop) > 0 {
 		// TODO implement DiffSuppressFunc
 		d.Set("capabilities", []interface{}{
 			map[string]interface{}{
-				"add":  container.HostConfig.CapAdd,
-				"drop": container.HostConfig.CapDrop,
+				"add":  cont.HostConfig.CapAdd,
+				"drop": cont.HostConfig.CapDrop,
 			},
 		})
 	}
-	d.Set("runtime", container.HostConfig.Runtime)
-	d.Set("mounts", getDockerContainerMounts(container))
+	d.Set("runtime", cont.HostConfig.Runtime)
+	d.Set("mounts", getDockerContainerMounts(cont))
 	// volumes
-	d.Set("tmpfs", container.HostConfig.Tmpfs)
-	if err := d.Set("host", flattenExtraHosts(container.HostConfig.ExtraHosts)); err != nil {
+	d.Set("tmpfs", cont.HostConfig.Tmpfs)
+	if err := d.Set("host", flattenExtraHosts(cont.HostConfig.ExtraHosts)); err != nil {
 		log.Printf("[WARN] failed to set container hostconfig extrahosts from API: %s", err)
 	}
-	if err = d.Set("ulimit", flattenUlimits(container.HostConfig.Ulimits)); err != nil {
+	if err = d.Set("ulimit", flattenUlimits(cont.HostConfig.Ulimits)); err != nil {
 		log.Printf("[WARN] failed to set container hostconfig  ulimits from API: %s", err)
 	}
 
@@ -714,47 +714,47 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 	// https://github.com/guru-terraform/docker-provider/issues/242
 	// https://github.com/guru-terraform/docker-provider/pull/269
 
-	d.Set("privileged", container.HostConfig.Privileged)
-	if err = d.Set("devices", flattenDevices(container.HostConfig.Devices)); err != nil {
+	d.Set("privileged", cont.HostConfig.Privileged)
+	if err = d.Set("devices", flattenDevices(cont.HostConfig.Devices)); err != nil {
 		log.Printf("[WARN] failed to set container hostconfig devices from API: %s", err)
 	}
 	// "destroy_grace_seconds" can't be imported
-	d.Set("memory", container.HostConfig.Memory/1024/1024)
-	if container.HostConfig.MemorySwap > 0 {
-		d.Set("memory_swap", container.HostConfig.MemorySwap/1024/1024)
+	d.Set("memory", cont.HostConfig.Memory/1024/1024)
+	if cont.HostConfig.MemorySwap > 0 {
+		d.Set("memory_swap", cont.HostConfig.MemorySwap/1024/1024)
 	} else {
-		d.Set("memory_swap", container.HostConfig.MemorySwap)
+		d.Set("memory_swap", cont.HostConfig.MemorySwap)
 	}
-	d.Set("shm_size", container.HostConfig.ShmSize/1024/1024)
-	d.Set("cpu_shares", container.HostConfig.CPUShares)
-	d.Set("cpu_set", container.HostConfig.CpusetCpus)
-	d.Set("log_driver", container.HostConfig.LogConfig.Type)
-	d.Set("log_opts", container.HostConfig.LogConfig.Config)
-	d.Set("storage_opts", container.HostConfig.StorageOpt)
-	d.Set("network_mode", container.HostConfig.NetworkMode)
-	d.Set("pid_mode", container.HostConfig.PidMode)
-	d.Set("userns_mode", container.HostConfig.UsernsMode)
+	d.Set("shm_size", cont.HostConfig.ShmSize/1024/1024)
+	d.Set("cpu_shares", cont.HostConfig.CPUShares)
+	d.Set("cpu_set", cont.HostConfig.CpusetCpus)
+	d.Set("log_driver", cont.HostConfig.LogConfig.Type)
+	d.Set("log_opts", cont.HostConfig.LogConfig.Config)
+	d.Set("storage_opts", cont.HostConfig.StorageOpt)
+	d.Set("network_mode", cont.HostConfig.NetworkMode)
+	d.Set("pid_mode", cont.HostConfig.PidMode)
+	d.Set("userns_mode", cont.HostConfig.UsernsMode)
 	// "upload" can't be imported
-	if container.Config.Healthcheck != nil {
+	if cont.Config.Healthcheck != nil {
 		d.Set("healthcheck", []interface{}{
 			map[string]interface{}{
-				"test":         container.Config.Healthcheck.Test,
-				"interval":     container.Config.Healthcheck.Interval.String(),
-				"timeout":      container.Config.Healthcheck.Timeout.String(),
-				"start_period": container.Config.Healthcheck.StartPeriod.String(),
-				"retries":      container.Config.Healthcheck.Retries,
+				"test":         cont.Config.Healthcheck.Test,
+				"interval":     cont.Config.Healthcheck.Interval.String(),
+				"timeout":      cont.Config.Healthcheck.Timeout.String(),
+				"start_period": cont.Config.Healthcheck.StartPeriod.String(),
+				"retries":      cont.Config.Healthcheck.Retries,
 			},
 		})
 	}
-	d.Set("sysctls", container.HostConfig.Sysctls)
-	d.Set("ipc_mode", container.HostConfig.IpcMode)
-	d.Set("group_add", container.HostConfig.GroupAdd)
-	d.Set("tty", container.Config.Tty)
-	d.Set("stdin_open", container.Config.OpenStdin)
-	d.Set("stop_signal", container.Config.StopSignal)
-	d.Set("stop_timeout", container.Config.StopTimeout)
+	d.Set("sysctls", cont.HostConfig.Sysctls)
+	d.Set("ipc_mode", cont.HostConfig.IpcMode)
+	d.Set("group_add", cont.HostConfig.GroupAdd)
+	d.Set("tty", cont.Config.Tty)
+	d.Set("stdin_open", cont.Config.OpenStdin)
+	d.Set("stop_signal", cont.Config.StopSignal)
+	d.Set("stop_timeout", cont.Config.StopTimeout)
 
-	if len(container.HostConfig.DeviceRequests) > 0 {
+	if len(cont.HostConfig.DeviceRequests) > 0 {
 		// TODO pass the original gpus property string back to the resource
 		// var gpuOpts opts.GpuOpts
 		// gpuOpts = opts.GpuOpts{container.HostConfig.DeviceRequests}

@@ -25,25 +25,21 @@ func resourceDockerImage() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 			},
-
 			"image_id": {
 				Type:        schema.TypeString,
 				Description: "The ID of the image (as seen when executing `docker inspect` on the image). Can be used to reference the image via its ID in other resources.",
 				Computed:    true,
 			},
-
 			"repo_digest": {
 				Type:        schema.TypeString,
 				Description: "The image sha256 digest in the form of `repo[:tag]@sha256:<hash>`.",
 				Computed:    true,
 			},
-
 			"keep_locally": {
 				Type:        schema.TypeBool,
 				Description: "If true, then the Docker image won't be deleted on destroy operation. If this is false, it will delete the image from the docker local storage on destroy operation.",
 				Optional:    true,
 			},
-
 			"pull_triggers": {
 				Type:        schema.TypeSet,
 				Description: "List of values which cause an image pull when changed. This is used to store the image digest from the registry when using the [docker_registry_image](../data-sources/registry_image.md).",
@@ -52,13 +48,11 @@ func resourceDockerImage() *schema.Resource {
 				Elem:        &schema.Schema{Type: schema.TypeString},
 				Set:         schema.HashString,
 			},
-
 			"force_remove": {
 				Type:        schema.TypeBool,
 				Description: "If true, then the image is removed forcibly when the resource is destroyed.",
 				Optional:    true,
 			},
-
 			"build": {
 				Type:          schema.TypeSet,
 				Description:   "Configuration to build an image. Please see [docker build command reference](https://docs.docker.com/engine/reference/commandline/build/#options) too.",
