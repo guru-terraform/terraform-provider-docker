@@ -79,7 +79,7 @@ test-compile:
 
 website-generation:
 	go generate
-	
+
 website-link-check:
 	@scripts/markdown-link-check.sh
 
