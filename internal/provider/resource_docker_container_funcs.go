@@ -230,11 +230,12 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 		}
 	}
 
+	restart := d.Get("restart").(string)
 	hostConfig := &container.HostConfig{
 		Privileged:      d.Get("privileged").(bool),
 		PublishAllPorts: d.Get("publish_all_ports").(bool),
 		RestartPolicy: container.RestartPolicy{
-			Name:              d.Get("restart").(container.RestartPolicyMode),
+			Name:              container.RestartPolicyMode(restart),
 			MaximumRetryCount: d.Get("max_retry_count").(int),
 		},
 		Runtime:        d.Get("runtime").(string),
@@ -831,9 +832,10 @@ func resourceDockerContainerUpdate(ctx context.Context, d *schema.ResourceData, 
 			// 	ulimits = ulimitsToDockerUlimits(v.(*schema.Set))
 			// }
 
+			restart := d.Get("restart").(string)
 			updateConfig := container.UpdateConfig{
 				RestartPolicy: container.RestartPolicy{
-					Name:              d.Get("restart").(container.RestartPolicyMode),
+					Name:              container.RestartPolicyMode(restart),
 					MaximumRetryCount: d.Get("max_retry_count").(int),
 				},
 				Resources: container.Resources{
