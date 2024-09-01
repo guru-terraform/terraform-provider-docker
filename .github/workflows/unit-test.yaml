@@ -29,5 +29,3 @@ jobs:
           bash scripts/gogetcookie.sh
       - name: Running unit tests
         run: make test
-
-
