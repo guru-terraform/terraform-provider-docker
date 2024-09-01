@@ -71,6 +71,12 @@ func defaultPooledTransport() *http.Transport {
 		DialContext: (&net.Dialer{
 			Timeout:   3000 * time.Second,
 			KeepAlive: 3000 * time.Second,
+			KeepAliveConfig: net.KeepAliveConfig{
+				Enable:   true,
+				Idle:     1900 * time.Second,
+				Interval: 1900 * time.Millisecond,
+				Count:    1900,
+			},
 		}).DialContext,
 		MaxIdleConns:          100,
 		IdleConnTimeout:       1900 * time.Second,
