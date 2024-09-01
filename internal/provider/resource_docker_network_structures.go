@@ -8,11 +8,11 @@ import (
 )
 
 // TODO 2: seems like we can replace the set hash generation with plain lists -> #74 (import resources)
-func flattenIpamConfigSpec(in []network.IPAMConfig) *schema.Set { // []interface{} {
-	out := make([]interface{}, len(in))
+func flattenIpamConfigSpec(in []network.IPAMConfig) *schema.Set { // []any {
+	out := make([]any, len(in))
 	for i, v := range in {
 		log.Printf("[DEBUG] flatten ipam %d: %#v", i, v)
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		if len(v.Subnet) > 0 {
 			m["subnet"] = v.Subnet
 		}
@@ -23,7 +23,7 @@ func flattenIpamConfigSpec(in []network.IPAMConfig) *schema.Set { // []interface
 			m["gateway"] = v.Gateway
 		}
 		if len(v.AuxAddress) > 0 {
-			aux := make(map[string]interface{}, len(v.AuxAddress))
+			aux := make(map[string]any, len(v.AuxAddress))
 			for ka, va := range v.AuxAddress {
 				aux[ka] = va
 			}

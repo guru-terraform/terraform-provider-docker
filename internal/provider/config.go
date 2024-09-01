@@ -69,18 +69,18 @@ func defaultPooledTransport() *http.Transport {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
-			Timeout:   3000 * time.Second,
-			KeepAlive: 3000 * time.Second,
+			Timeout:   6000 * time.Second,
+			KeepAlive: 6000 * time.Second,
 			KeepAliveConfig: net.KeepAliveConfig{
 				Enable:   true,
-				Idle:     1900 * time.Second,
-				Interval: 1900 * time.Millisecond,
-				Count:    1900,
+				Idle:     2900 * time.Second,
+				Interval: 2000 * time.Millisecond,
+				Count:    2900,
 			},
 		}).DialContext,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       1900 * time.Second,
-		TLSHandshakeTimeout:   1000 * time.Second,
+		MaxIdleConns:          1000,
+		IdleConnTimeout:       2900 * time.Second,
+		TLSHandshakeTimeout:   2000 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 		MaxIdleConnsPerHost:   runtime.GOMAXPROCS(0) + 2,
 	}

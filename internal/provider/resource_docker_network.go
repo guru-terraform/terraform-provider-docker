@@ -154,7 +154,7 @@ func resourceDockerNetwork() *schema.Resource {
 			{
 				Version: 0,
 				Type:    resourceDockerNetworkV0().CoreConfigSchema().ImpliedType(),
-				Upgrade: func(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+				Upgrade: func(ctx context.Context, rawState map[string]any, meta any) (map[string]any, error) {
 					return replaceLabelsMapFieldWithSetField(rawState), nil
 				},
 			},

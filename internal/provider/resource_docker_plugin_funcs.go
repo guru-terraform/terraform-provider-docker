@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceDockerPluginCreate(d *schema.ResourceData, meta interface{}) error {
+func resourceDockerPluginCreate(d *schema.ResourceData, meta any) error {
 	client := meta.(*ProviderConfig).DockerClient
 	ctx := context.Background()
 	pluginName := d.Get("name").(string)
@@ -47,7 +47,7 @@ func resourceDockerPluginCreate(d *schema.ResourceData, meta interface{}) error 
 	return nil
 }
 
-func resourceDockerPluginRead(d *schema.ResourceData, meta interface{}) error {
+func resourceDockerPluginRead(d *schema.ResourceData, meta any) error {
 	client := meta.(*ProviderConfig).DockerClient
 	ctx := context.Background()
 	pluginID := d.Id()
@@ -65,7 +65,7 @@ func resourceDockerPluginRead(d *schema.ResourceData, meta interface{}) error {
 	return nil
 }
 
-func resourceDockerPluginDelete(d *schema.ResourceData, meta interface{}) error {
+func resourceDockerPluginDelete(d *schema.ResourceData, meta any) error {
 	client := meta.(*ProviderConfig).DockerClient
 	ctx := context.Background()
 	pluginID := d.Id()
@@ -79,7 +79,7 @@ func resourceDockerPluginDelete(d *schema.ResourceData, meta interface{}) error 
 }
 
 // Helpers
-func getDockerPluginEnv(src interface{}) []string {
+func getDockerPluginEnv(src any) []string {
 	if src == nil {
 		return nil
 	}
@@ -91,8 +91,8 @@ func getDockerPluginEnv(src interface{}) []string {
 	return envs
 }
 
-func dockerPluginGrantPermissionsSetFunc(v interface{}) int {
-	return schema.HashString(v.(map[string]interface{})["name"].(string))
+func dockerPluginGrantPermissionsSetFunc(v any) int {
+	return schema.HashString(v.(map[string]any)["name"].(string))
 }
 
 func complementTag(image string) string {
@@ -122,18 +122,18 @@ func diffSuppressFuncPluginName(k, oldV, newV string, d *schema.ResourceData) bo
 	return o == n
 }
 
-func validateFuncPluginName(val interface{}, key string) (warns []string, errs []error) {
+func validateFuncPluginName(val any, key string) (warns []string, errs []error) {
 	if _, err := normalizePluginName(val.(string)); err != nil {
 		return warns, append(errs, fmt.Errorf("%s is invalid: %w", key, err))
 	}
 	return
 }
 
-func getDockerPluginGrantPermissions(src interface{}) func(context.Context, types.PluginPrivileges) (bool, error) {
+func getDockerPluginGrantPermissions(src any) func(context.Context, types.PluginPrivileges) (bool, error) {
 	grantPermissionsSet := src.(*schema.Set)
 	grantPermissions := make(map[string]map[string]struct{}, grantPermissionsSet.Len())
 	for _, b := range grantPermissionsSet.List() {
-		c := b.(map[string]interface{})
+		c := b.(map[string]any)
 		name := c["name"].(string)
 		values := c["value"].(*schema.Set)
 		grantPermission := make(map[string]struct{}, values.Len())
@@ -211,7 +211,7 @@ func pluginSet(ctx context.Context, d *schema.ResourceData, cl *client.Client) e
 	return nil
 }
 
-func pluginUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) (gErr error) {
+func pluginUpdate(ctx context.Context, d *schema.ResourceData, meta any) (gErr error) {
 	cl := meta.(*ProviderConfig).DockerClient
 	o, n := d.GetChange("enabled")
 	oldEnabled, newEnabled := o.(bool), n.(bool)
@@ -257,7 +257,7 @@ func pluginUpdate(ctx context.Context, d *schema.ResourceData, meta interface{})
 	return nil
 }
 
-func resourceDockerPluginUpdate(d *schema.ResourceData, meta interface{}) error {
+func resourceDockerPluginUpdate(d *schema.ResourceData, meta any) error {
 	ctx := context.Background()
 	if err := pluginUpdate(ctx, d, meta); err != nil {
 		return err

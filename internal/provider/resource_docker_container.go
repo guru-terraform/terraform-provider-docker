@@ -24,7 +24,7 @@ func resourceDockerContainer() *schema.Resource {
 			{
 				Version: 1,
 				Type:    resourceDockerContainerV1().CoreConfigSchema().ImpliedType(),
-				Upgrade: func(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+				Upgrade: func(ctx context.Context, rawState map[string]any, meta any) (map[string]any, error) {
 					// TODO do the ohter V0-to-V1 migration, unless we're okay
 					// with breaking for users who straggled on their docker
 					// provider version
@@ -483,7 +483,7 @@ func resourceDockerContainer() *schema.Resource {
 							Default:     "0.0.0.0",
 							Optional:    true,
 							ForceNew:    true,
-							StateFunc: func(val interface{}) string {
+							StateFunc: func(val any) string {
 								// Empty IP assignments default to 0.0.0.0
 								if val.(string) == "" {
 									return "0.0.0.0"
@@ -968,8 +968,8 @@ func suppressIfPortsDidNotChangeForMigrationV0ToV1() schema.SchemaDiffSuppressFu
 			return false
 		}
 		portsOldRaw, portsNewRaw := d.GetChange("ports")
-		portsOld := portsOldRaw.([]interface{})
-		portsNew := portsNewRaw.([]interface{})
+		portsOld := portsOldRaw.([]any)
+		portsNew := portsNewRaw.([]any)
 		if len(portsOld) != len(portsNew) {
 			log.Printf("[DEBUG] suppress diff ports: old and new don't have the same length")
 			return false
@@ -977,11 +977,11 @@ func suppressIfPortsDidNotChangeForMigrationV0ToV1() schema.SchemaDiffSuppressFu
 		log.Printf("[DEBUG] suppress diff ports: old and new have same length")
 
 		for _, portOld := range portsOld {
-			portOldMapped := portOld.(map[string]interface{})
+			portOldMapped := portOld.(map[string]any)
 			oldInternalPort := portOldMapped["internal"]
 			portFound := false
 			for _, portNew := range portsNew {
-				portNewMapped := portNew.(map[string]interface{})
+				portNewMapped := portNew.(map[string]any)
 				newInternalPort := portNewMapped["internal"]
 				// port is still there in new
 				if newInternalPort == oldInternalPort {
@@ -1018,9 +1018,9 @@ func suppressIfPortsDidNotChangeForMigrationV0ToV1() schema.SchemaDiffSuppressFu
 	}
 }
 
-func containsPortWithProtocol(ports []interface{}, searchInternalPort, searchProtocol interface{}) bool {
+func containsPortWithProtocol(ports []any, searchInternalPort, searchProtocol any) bool {
 	for _, port := range ports {
-		portMapped := port.(map[string]interface{})
+		portMapped := port.(map[string]any)
 		internalPort := portMapped["internal"]
 		protocol := portMapped["protocol"]
 		if internalPort == searchInternalPort && protocol == searchProtocol {

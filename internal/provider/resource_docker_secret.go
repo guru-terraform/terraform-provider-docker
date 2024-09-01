@@ -49,7 +49,7 @@ func resourceDockerSecret() *schema.Resource {
 			{
 				Version: 0,
 				Type:    resourceDockerSecretV0().CoreConfigSchema().ImpliedType(),
-				Upgrade: func(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+				Upgrade: func(ctx context.Context, rawState map[string]any, meta any) (map[string]any, error) {
 					return replaceLabelsMapFieldWithSetField(rawState), nil
 				},
 			},
@@ -88,7 +88,7 @@ func resourceDockerSecretV0() *schema.Resource {
 	}
 }
 
-func resourceDockerSecretCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerSecretCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 	data, _ := base64.StdEncoding.DecodeString(d.Get("data").(string))
 
@@ -113,7 +113,7 @@ func resourceDockerSecretCreate(ctx context.Context, d *schema.ResourceData, met
 	return resourceDockerSecretRead(ctx, d, meta)
 }
 
-func resourceDockerSecretRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerSecretRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 	secret, _, err := client.SecretInspectWithRaw(ctx, d.Id())
 	if err != nil {
@@ -133,7 +133,7 @@ func resourceDockerSecretRead(ctx context.Context, d *schema.ResourceData, meta 
 	return nil
 }
 
-func resourceDockerSecretDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerSecretDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 	err := client.SecretRemove(ctx, d.Id())
 	if err != nil {

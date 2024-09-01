@@ -72,7 +72,7 @@ func getDataSourcePluginKey(d *schema.ResourceData) (string, error) {
 	return "", errDataSourceKeyIsMissing
 }
 
-func dataSourceDockerPluginRead(d *schema.ResourceData, meta interface{}) error {
+func dataSourceDockerPluginRead(d *schema.ResourceData, meta any) error {
 	key, err := getDataSourcePluginKey(d)
 	if err != nil {
 		return err

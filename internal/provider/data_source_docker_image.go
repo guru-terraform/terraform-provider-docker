@@ -31,7 +31,7 @@ func dataSourceDockerImage() *schema.Resource {
 	}
 }
 
-func dataSourceDockerImageRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceDockerImageRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 
 	var data Data

@@ -82,7 +82,7 @@ func dataSourceDockerLogs() *schema.Resource {
 	}
 }
 
-func dataSourceDockerLogsRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceDockerLogsRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 	container := d.Get("name").(string)
 	d.SetId(container)

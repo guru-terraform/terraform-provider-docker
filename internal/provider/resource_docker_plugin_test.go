@@ -16,7 +16,7 @@ func Test_getDockerPluginEnv(t *testing.T) {
 	t.Parallel()
 	data := []struct {
 		title string
-		src   interface{}
+		src   any
 		exp   []string
 	}{
 		{
@@ -24,7 +24,7 @@ func Test_getDockerPluginEnv(t *testing.T) {
 		},
 		{
 			title: "basic",
-			src:   schema.NewSet(schema.HashString, []interface{}{"DEBUG=1"}),
+			src:   schema.NewSet(schema.HashString, []any{"DEBUG=1"}),
 			exp:   []string{"DEBUG=1"},
 		},
 	}
@@ -129,27 +129,27 @@ func Test_getDockerPluginGrantPermissions(t *testing.T) {
 	t.Parallel()
 	data := []struct {
 		title      string
-		src        interface{}
+		src        any
 		privileges types.PluginPrivileges
 		exp        bool
 		isErr      bool
 	}{
 		{
 			title: "no privilege",
-			src: schema.NewSet(dockerPluginGrantPermissionsSetFunc, []interface{}{
-				map[string]interface{}{
+			src: schema.NewSet(dockerPluginGrantPermissionsSetFunc, []any{
+				map[string]any{
 					"name":  "network",
-					"value": schema.NewSet(schema.HashString, []interface{}{"host"}),
+					"value": schema.NewSet(schema.HashString, []any{"host"}),
 				},
 			}),
 			exp: true,
 		},
 		{
 			title: "basic",
-			src: schema.NewSet(dockerPluginGrantPermissionsSetFunc, []interface{}{
-				map[string]interface{}{
+			src: schema.NewSet(dockerPluginGrantPermissionsSetFunc, []any{
+				map[string]any{
 					"name":  "network",
-					"value": schema.NewSet(schema.HashString, []interface{}{"host"}),
+					"value": schema.NewSet(schema.HashString, []any{"host"}),
 				},
 			}),
 			privileges: types.PluginPrivileges{
@@ -162,10 +162,10 @@ func Test_getDockerPluginGrantPermissions(t *testing.T) {
 		},
 		{
 			title: "permission denied 1",
-			src: schema.NewSet(dockerPluginGrantPermissionsSetFunc, []interface{}{
-				map[string]interface{}{
+			src: schema.NewSet(dockerPluginGrantPermissionsSetFunc, []any{
+				map[string]any{
 					"name": "network",
-					"value": schema.NewSet(schema.HashString, []interface{}{
+					"value": schema.NewSet(schema.HashString, []any{
 						"host",
 					}),
 				},
@@ -180,16 +180,16 @@ func Test_getDockerPluginGrantPermissions(t *testing.T) {
 		},
 		{
 			title: "permission denied 2",
-			src: schema.NewSet(dockerPluginGrantPermissionsSetFunc, []interface{}{
-				map[string]interface{}{
+			src: schema.NewSet(dockerPluginGrantPermissionsSetFunc, []any{
+				map[string]any{
 					"name": "network",
-					"value": schema.NewSet(schema.HashString, []interface{}{
+					"value": schema.NewSet(schema.HashString, []any{
 						"host",
 					}),
 				},
-				map[string]interface{}{
+				map[string]any{
 					"name": "mount",
-					"value": schema.NewSet(schema.HashString, []interface{}{
+					"value": schema.NewSet(schema.HashString, []any{
 						"/var/lib/docker/plugins/",
 					}),
 				},

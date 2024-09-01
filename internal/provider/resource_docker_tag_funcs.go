@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceDockerTagCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerTagCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 	sourceImage := d.Get("source_image").(string)
 	targetImage := d.Get("target_image").(string)
@@ -24,11 +24,11 @@ func resourceDockerTagCreate(ctx context.Context, d *schema.ResourceData, meta i
 	return nil
 }
 
-func resourceDockerTagDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerTagDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	// We do not delete any of the source and target images
 	return nil
 }
 
-func resourceDockerTagRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerTagRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	return nil
 }

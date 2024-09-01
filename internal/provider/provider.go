@@ -41,7 +41,7 @@ func New(version string) func() *schema.Provider {
 				"host": {
 					Type:     schema.TypeString,
 					Required: true,
-					DefaultFunc: func() (interface{}, error) {
+					DefaultFunc: func() (any, error) {
 						if v := os.Getenv("DOCKER_HOST"); v != "" {
 							return v, nil
 						}
@@ -56,7 +56,7 @@ func New(version string) func() *schema.Provider {
 					Type:     schema.TypeList,
 					Optional: true,
 					Elem:     &schema.Schema{Type: schema.TypeString},
-					DefaultFunc: func() (interface{}, error) {
+					DefaultFunc: func() (any, error) {
 						if v := os.Getenv("DOCKER_SSH_OPTS"); v != "" {
 							return strings.Fields(v), nil
 						}
@@ -169,12 +169,12 @@ func New(version string) func() *schema.Provider {
 	}
 }
 
-func configure(version string, p *schema.Provider) func(context.Context, *schema.ResourceData) (interface{}, diag.Diagnostics) {
-	return func(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
-		SSHOptsI := d.Get("ssh_opts").([]interface{})
+func configure(version string, p *schema.Provider) func(context.Context, *schema.ResourceData) (any, diag.Diagnostics) {
+	return func(ctx context.Context, d *schema.ResourceData) (any, diag.Diagnostics) {
+		SSHOptsI := d.Get("ssh_opts").([]string)
 		SSHOpts := make([]string, len(SSHOptsI))
 		for i, s := range SSHOptsI {
-			SSHOpts[i] = s.(string)
+			SSHOpts[i] = s
 		}
 		config := Config{
 			Host:     d.Get("host").(string),
@@ -227,16 +227,16 @@ func providerSetToRegistryAuth(authList *schema.Set) (*AuthConfigs, error) {
 
 	for _, auth := range authList.List() {
 		authConfig := registry.AuthConfig{}
-		address := auth.(map[string]interface{})["address"].(string)
+		address := auth.(map[string]any)["address"].(string)
 		authConfig.ServerAddress = normalizeRegistryAddress(address)
 		registryHostname := convertToHostname(authConfig.ServerAddress)
 
-		username, ok := auth.(map[string]interface{})["username"].(string)
-		password := auth.(map[string]interface{})["password"].(string)
+		username, ok := auth.(map[string]any)["username"].(string)
+		password := auth.(map[string]any)["password"].(string)
 
 		// If auth is disabled, set the auth config to any user/password combination
 		// See https://github.com/guru-terraform/terraform-provider-docker/issues/470 for more information
-		if auth.(map[string]interface{})["auth_disabled"].(bool) {
+		if auth.(map[string]any)["auth_disabled"].(bool) {
 			log.Printf("[DEBUG] Auth disabled for registry %s", registryHostname)
 			username = "username"
 			password = "password"
@@ -256,7 +256,7 @@ func providerSetToRegistryAuth(authList *schema.Set) (*AuthConfigs, error) {
 			// Note: check for config_file_content first because config_file has a default which would be used
 			// nevertheless config_file_content is set or not. The default has to be kept to check for the
 			// environment variable and to be backwards compatible
-		} else if configFileContent, ok := auth.(map[string]interface{})["config_file_content"].(string); ok && configFileContent != "" {
+		} else if configFileContent, ok := auth.(map[string]any)["config_file_content"].(string); ok && configFileContent != "" {
 			log.Println("[DEBUG] Parsing file content for registry auths:", configFileContent)
 			r := strings.NewReader(configFileContent)
 
@@ -272,7 +272,7 @@ func providerSetToRegistryAuth(authList *schema.Set) (*AuthConfigs, error) {
 			authConfig.Password = authFileConfig.Password
 
 			// As last step we check if a config file path is given
-		} else if configFile, ok := auth.(map[string]interface{})["config_file"].(string); ok && configFile != "" {
+		} else if configFile, ok := auth.(map[string]any)["config_file"].(string); ok && configFile != "" {
 			filePath := configFile
 			log.Println("[DEBUG] Parsing file for registry auths:", filePath)
 

@@ -404,7 +404,7 @@ func resourceDockerContainerV1() *schema.Resource {
 							Default:  "0.0.0.0",
 							Optional: true,
 							ForceNew: true,
-							StateFunc: func(val interface{}) string {
+							StateFunc: func(val any) string {
 								// Empty IP assignments default to 0.0.0.0
 								if val.(string) == "" {
 									return "0.0.0.0"
@@ -826,7 +826,7 @@ func resourceDockerContainerV1() *schema.Resource {
 }
 
 func resourceDockerContainerMigrateState(
-	v int, is *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
+	v int, is *terraform.InstanceState, meta any) (*terraform.InstanceState, error) {
 	switch v {
 	case 0:
 		log.Println("[INFO] Found Docker Container State v0; migrating to v1")
@@ -836,7 +836,7 @@ func resourceDockerContainerMigrateState(
 	}
 }
 
-func migrateDockerContainerMigrateStateV0toV1(is *terraform.InstanceState, meta interface{}) (*terraform.InstanceState, error) {
+func migrateDockerContainerMigrateStateV0toV1(is *terraform.InstanceState, meta any) (*terraform.InstanceState, error) {
 	if is.Empty() {
 		log.Println("[DEBUG] Empty InstanceState; nothing to migrate.")
 		return is, nil
@@ -872,7 +872,7 @@ func (s byPort) Less(i, j int) bool {
 	return s[i].internal < s[j].internal
 }
 
-func updateV0ToV1PortsOrder(is *terraform.InstanceState, meta interface{}) error {
+func updateV0ToV1PortsOrder(is *terraform.InstanceState, meta any) error {
 	reader := &schema.MapFieldReader{
 		Schema: resourceDockerContainer().Schema,
 		Map:    schema.BasicMapReader(is.Attributes),
@@ -893,12 +893,12 @@ func updateV0ToV1PortsOrder(is *terraform.InstanceState, meta interface{}) error
 
 	// map the ports into a struct, so they can be sorted easily
 	portsMapped := make([]mappedPort, 0)
-	portsRaw := result.Value.([]interface{})
+	portsRaw := result.Value.([]any)
 	for _, portRaw := range portsRaw {
 		if portRaw == nil {
 			continue
 		}
-		portTyped := portRaw.(map[string]interface{})
+		portTyped := portRaw.(map[string]any)
 		portMapped := mappedPort{
 			internal: portTyped["internal"].(int),
 			external: portTyped["external"].(int),
@@ -911,9 +911,9 @@ func updateV0ToV1PortsOrder(is *terraform.InstanceState, meta interface{}) error
 	sort.Sort(byPort(portsMapped))
 
 	// map the sorted ports to an output structure tf can write
-	outputPorts := make([]interface{}, 0)
+	outputPorts := make([]any, 0)
 	for _, mappedPort := range portsMapped {
-		outputPort := make(map[string]interface{})
+		outputPort := make(map[string]any)
 		outputPort["internal"] = mappedPort.internal
 		outputPort["external"] = mappedPort.external
 		outputPort["ip"] = mappedPort.ip
@@ -932,44 +932,44 @@ func updateV0ToV1PortsOrder(is *terraform.InstanceState, meta interface{}) error
 	return nil
 }
 
-func replaceLabelsMapFieldWithSetField(rawState map[string]interface{}) map[string]interface{} {
+func replaceLabelsMapFieldWithSetField(rawState map[string]any) map[string]any {
 	if rawState == nil {
 		return nil
 	}
 	labelMapIFace := rawState["labels"]
 	if labelMapIFace != nil {
-		labelMap := labelMapIFace.(map[string]interface{})
+		labelMap := labelMapIFace.(map[string]any)
 		rawState["labels"] = mapStringInterfaceToLabelList(labelMap)
 	} else {
-		rawState["labels"] = []interface{}{}
+		rawState["labels"] = []any{}
 	}
 
 	return rawState
 }
 
-func migrateContainerLabels(rawState map[string]interface{}) map[string]interface{} {
+func migrateContainerLabels(rawState map[string]any) map[string]any {
 	if rawState == nil {
 		// https://github.com/guru-terraform/terraform-provider-docker/issues/176
 		// to prevent error `assignment to entry in nil map`
-		rawState = map[string]interface{}{}
+		rawState = map[string]any{}
 	}
 	replaceLabelsMapFieldWithSetField(rawState)
 
 	m, ok := rawState["mounts"]
 	if !ok || m == nil {
 		// https://github.com/guru-terraform/docker-provider/issues/264
-		rawState["mounts"] = []interface{}{}
+		rawState["mounts"] = []any{}
 		return rawState
 	}
 
-	mounts := m.([]interface{})
-	newMounts := make([]interface{}, len(mounts))
+	mounts := m.([]any)
+	newMounts := make([]any, len(mounts))
 	for i, mountI := range mounts {
-		mount := mountI.(map[string]interface{})
-		volumeOptionsList := mount["volume_options"].([]interface{})
+		mount := mountI.(map[string]any)
+		volumeOptionsList := mount["volume_options"].([]any)
 
 		if len(volumeOptionsList) != 0 {
-			replaceLabelsMapFieldWithSetField(volumeOptionsList[0].(map[string]interface{}))
+			replaceLabelsMapFieldWithSetField(volumeOptionsList[0].(map[string]any))
 		}
 		newMounts[i] = mount
 	}

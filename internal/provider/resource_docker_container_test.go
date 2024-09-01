@@ -23,7 +23,7 @@ import (
 )
 
 func TestMapTypeMapValsToStringSlice(t *testing.T) {
-	typeMap := make(map[string]interface{})
+	typeMap := make(map[string]any)
 	typeMap["foo"] = "bar"
 	typeMap[""] = ""
 	stringSlice := mapTypeMapValsToStringSlice(typeMap)

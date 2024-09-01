@@ -91,9 +91,9 @@ func dataSourceDockerNetwork() *schema.Resource {
 	}
 }
 
-type ipamMap map[string]interface{}
+type ipamMap map[string]any
 
-func dataSourceDockerNetworkRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceDockerNetworkRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	name, nameOk := d.GetOk("name")
 	_, idOk := d.GetOk("id")
 

@@ -29,7 +29,7 @@ type convergeConfig struct {
 // ///////////////
 // TF CRUD funcs
 // ///////////////
-func resourceDockerServiceCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerServiceCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	var err error
 	client := meta.(*ProviderConfig).DockerClient
 
@@ -49,7 +49,7 @@ func resourceDockerServiceCreate(ctx context.Context, d *schema.ResourceData, me
 		return diag.FromErr(err)
 	}
 	if v, ok := d.GetOk("converge_config"); ok {
-		convergeConfig := createConvergeConfig(v.([]interface{}))
+		convergeConfig := createConvergeConfig(v.([]any))
 		log.Printf("[INFO] Waiting for Service '%s' to be created with timeout: %v", service.ID, convergeConfig.timeoutRaw)
 		timeout, _ := time.ParseDuration(convergeConfig.timeoutRaw)
 		stateConf := &retry.StateChangeConf{
@@ -79,7 +79,7 @@ func resourceDockerServiceCreate(ctx context.Context, d *schema.ResourceData, me
 	return resourceDockerServiceRead(ctx, d, meta)
 }
 
-func resourceDockerServiceRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerServiceRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	log.Printf("[INFO] Waiting for service: '%s' to expose all fields: max '%v seconds'", d.Id(), 30)
 
 	stateConf := &retry.StateChangeConf{
@@ -101,8 +101,8 @@ func resourceDockerServiceRead(ctx context.Context, d *schema.ResourceData, meta
 }
 
 func resourceDockerServiceReadRefreshFunc(ctx context.Context,
-	d *schema.ResourceData, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+	d *schema.ResourceData, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		client := meta.(*ProviderConfig).DockerClient
 		serviceID := d.Id()
 
@@ -161,7 +161,7 @@ func resourceDockerServiceReadRefreshFunc(ctx context.Context,
 	}
 }
 
-func resourceDockerServiceUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerServiceUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 
 	service, _, err := client.ServiceInspectWithRaw(ctx, d.Id(), types.ServiceInspectOptions{})
@@ -190,7 +190,7 @@ func resourceDockerServiceUpdate(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	if v, ok := d.GetOk("converge_config"); ok {
-		convergeConfig := createConvergeConfig(v.([]interface{}))
+		convergeConfig := createConvergeConfig(v.([]any))
 		log.Printf("[INFO] Waiting for Service '%s' to be updated with timeout: %v", service.ID, convergeConfig.timeoutRaw)
 		timeout, _ := time.ParseDuration(convergeConfig.timeoutRaw)
 		stateConf := &retry.StateChangeConf{
@@ -216,7 +216,7 @@ func resourceDockerServiceUpdate(ctx context.Context, d *schema.ResourceData, me
 	return resourceDockerServiceRead(ctx, d, meta)
 }
 
-func resourceDockerServiceDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerServiceDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 
 	if err := deleteService(ctx, d.Id(), d, client); err != nil {
@@ -345,8 +345,8 @@ func (err *DidNotConvergeError) Error() string {
 
 // resourceDockerServiceCreateRefreshFunc refreshes the state of a service when it is created and needs to converge
 func resourceDockerServiceCreateRefreshFunc(ctx context.Context,
-	serviceID string, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+	serviceID string, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		client := meta.(*ProviderConfig).DockerClient
 
 		var updater progressUpdater
@@ -395,8 +395,8 @@ func resourceDockerServiceCreateRefreshFunc(ctx context.Context,
 
 // resourceDockerServiceUpdateRefreshFunc refreshes the state of a service when it is updated and needs to converge
 func resourceDockerServiceUpdateRefreshFunc(ctx context.Context,
-	serviceID string, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+	serviceID string, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		client := meta.(*ProviderConfig).DockerClient
 
 		var (
@@ -594,12 +594,12 @@ func terminalState(state swarm.TaskState) bool {
 }
 
 // authToServiceAuth maps the auth to AuthConfiguration
-func authToServiceAuth(auths []interface{}) registry.AuthConfig {
+func authToServiceAuth(auths []any) registry.AuthConfig {
 	if len(auths) == 0 {
 		return registry.AuthConfig{}
 	}
 	// it's maxItems = 1
-	auth := auths[0].(map[string]interface{})
+	auth := auths[0].(map[string]any)
 	if auth["username"] != nil && len(auth["username"].(string)) > 0 && auth["password"] != nil && len(auth["password"].(string)) > 0 {
 		return registry.AuthConfig{
 			Username:      auth["username"].(string),
@@ -630,13 +630,13 @@ func fromRegistryAuth(image string, authConfigs map[string]registry.AuthConfig) 
 }
 
 // retrieveAndMarshalAuth retrieves and marshals the service registry auth
-func retrieveAndMarshalAuth(d *schema.ResourceData, meta interface{}, stageType string) []byte {
+func retrieveAndMarshalAuth(d *schema.ResourceData, meta any, stageType string) []byte {
 	var auth registry.AuthConfig
 	// when a service is updated/set for the first time the auth is set but empty
 	// this is why we need this additional check
-	if rawAuth, ok := d.GetOk("auth"); ok && len(rawAuth.([]interface{})) != 0 {
+	if rawAuth, ok := d.GetOk("auth"); ok && len(rawAuth.([]any)) != 0 {
 		log.Printf("[DEBUG] Getting configs from service auth '%v'", rawAuth)
-		auth = authToServiceAuth(rawAuth.([]interface{}))
+		auth = authToServiceAuth(rawAuth.([]any))
 	} else {
 		authConfigs := meta.(*ProviderConfig).AuthConfigs.Configs
 		log.Printf("[DEBUG] Getting configs from provider auth '%v'", authConfigs)

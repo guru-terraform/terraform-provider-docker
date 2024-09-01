@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-func labelToPair(label map[string]interface{}) (string, string) {
+func labelToPair(label map[string]any) (string, string) {
 	return label["label"].(string), label["value"].(string)
 }
 
@@ -18,14 +18,14 @@ func labelSetToMap(labels *schema.Set) map[string]string {
 
 	mapped := make(map[string]string, len(labelsSlice))
 	for _, label := range labelsSlice {
-		l, v := labelToPair(label.(map[string]interface{}))
+		l, v := labelToPair(label.(map[string]any))
 		mapped[l] = v
 	}
 	return mapped
 }
 
-func hashLabel(v interface{}) int {
-	labelMap := v.(map[string]interface{})
+func hashLabel(v any) int {
+	labelMap := v.(map[string]any)
 	return hashStringLabel(labelMap["label"].(string))
 }
 
@@ -33,10 +33,10 @@ func hashStringLabel(str string) int {
 	return schema.HashString(str)
 }
 
-func mapStringInterfaceToLabelList(labels map[string]interface{}) []interface{} {
-	var mapped []interface{}
+func mapStringInterfaceToLabelList(labels map[string]any) []any {
+	var mapped []any
 	for k, v := range labels {
-		mapped = append(mapped, map[string]interface{}{
+		mapped = append(mapped, map[string]any{
 			"label": k,
 			"value": fmt.Sprintf("%v", v),
 		})
@@ -45,9 +45,9 @@ func mapStringInterfaceToLabelList(labels map[string]interface{}) []interface{} 
 }
 
 func mapToLabelSet(labels map[string]string) *schema.Set {
-	var mapped []interface{}
+	var mapped []any
 	for k, v := range labels {
-		mapped = append(mapped, map[string]interface{}{
+		mapped = append(mapped, map[string]any{
 			"label": k,
 			"value": v,
 		})

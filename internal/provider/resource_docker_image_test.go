@@ -32,12 +32,12 @@ func TestAccDockerRegistryImageResource_mapping(t *testing.T) {
 
 	dummyProvider := New("dev")()
 	dummyResource := dummyProvider.ResourcesMap["docker_image"]
-	dummyResource.CreateContext = func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	dummyResource.CreateContext = func(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 
 		if value, ok := d.GetOk("build"); ok {
 			for _, rawBuild := range value.(*schema.Set).List() {
-				build := rawBuild.(map[string]interface{})
-				// build := d.Get("build").([]interface{})[0].(map[string]interface{})
+				build := rawBuild.(map[string]any)
+				// build := d.Get("build").([]any)[0].(map[string]any)
 				options := createImageBuildOptions(build)
 
 				assert(options.SuppressOutput == true, "SuppressOutput")
@@ -93,13 +93,13 @@ func TestAccDockerRegistryImageResource_mapping(t *testing.T) {
 		}
 		return nil
 	}
-	dummyResource.UpdateContext = func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	dummyResource.UpdateContext = func(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 		return nil
 	}
-	dummyResource.DeleteContext = func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	dummyResource.DeleteContext = func(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 		return nil
 	}
-	dummyResource.ReadContext = func(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+	dummyResource.ReadContext = func(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 		d.Set("id", "foo")
 		return nil
 	}

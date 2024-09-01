@@ -6,25 +6,25 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceDockerServiceStateUpgradeV2(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
-	taskSpec, _ := rawState["task_spec"].([]interface{})[0].(map[string]interface{})
+func resourceDockerServiceStateUpgradeV2(ctx context.Context, rawState map[string]any, meta any) (map[string]any, error) {
+	taskSpec, _ := rawState["task_spec"].([]any)[0].(map[string]any)
 	r, ok := taskSpec["restart_policy"]
 	if !ok || r == nil {
-		taskSpec["restart_policy"] = []interface{}{}
+		taskSpec["restart_policy"] = []any{}
 	} else {
-		restartPolicy := r.(map[string]interface{})
+		restartPolicy := r.(map[string]any)
 		// because we have MaxItem 1
-		newRestartPolicy := make([]interface{}, 1)
+		newRestartPolicy := make([]any, 1)
 		newRestartPolicy[0] = restartPolicy
 		taskSpec["restart_policy"] = newRestartPolicy
 	}
 
 	a, ok := rawState["auth"]
 	if !ok || a == nil {
-		rawState["auth"] = []interface{}{}
+		rawState["auth"] = []any{}
 	} else {
-		auth := a.(map[string]interface{})
-		newAuth := make([]interface{}, 1)
+		auth := a.(map[string]any)
+		newAuth := make([]any, 1)
 		newAuth[0] = auth
 		rawState["auth"] = newAuth
 	}
@@ -952,7 +952,7 @@ func resourceDockerServiceV1() *schema.Resource {
 			{
 				Version: 0,
 				Type:    resourceDockerServiceV0().CoreConfigSchema().ImpliedType(),
-				Upgrade: func(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+				Upgrade: func(ctx context.Context, rawState map[string]any, meta any) (map[string]any, error) {
 					return migrateServiceLabels(rawState), nil
 				},
 			},
@@ -1825,11 +1825,11 @@ func resourceDockerServiceV0() *schema.Resource {
 	}
 }
 
-func migrateServiceLabels(rawState map[string]interface{}) map[string]interface{} {
+func migrateServiceLabels(rawState map[string]any) map[string]any {
 	replaceLabelsMapFieldWithSetField(rawState)
 
-	taskSpec := rawState["task_spec"].([]interface{})[0].(map[string]interface{})
-	containerSpec := taskSpec["container_spec"].([]interface{})[0].(map[string]interface{})
+	taskSpec := rawState["task_spec"].([]any)[0].(map[string]any)
+	containerSpec := taskSpec["container_spec"].([]any)[0].(map[string]any)
 	migrateContainerLabels(containerSpec)
 
 	return rawState

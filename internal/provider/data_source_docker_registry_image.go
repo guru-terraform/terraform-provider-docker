@@ -45,7 +45,7 @@ func dataSourceDockerRegistryImage() *schema.Resource {
 	}
 }
 
-func dataSourceDockerRegistryImageRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func dataSourceDockerRegistryImageRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	pullOpts := parseImageOptions(d.Get("name").(string))
 
 	authConfig, err := getAuthConfigForRegistry(pullOpts.Registry, meta.(*ProviderConfig))

@@ -41,7 +41,7 @@ func resourceDockerConfig() *schema.Resource {
 	}
 }
 
-func resourceDockerConfigCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerConfigCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 	data, _ := base64.StdEncoding.DecodeString(d.Get("data").(string))
 
@@ -61,7 +61,7 @@ func resourceDockerConfigCreate(ctx context.Context, d *schema.ResourceData, met
 	return resourceDockerConfigRead(ctx, d, meta)
 }
 
-func resourceDockerConfigRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerConfigRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 	config, _, err := client.ConfigInspectWithRaw(ctx, d.Id())
 	if err != nil {
@@ -79,7 +79,7 @@ func resourceDockerConfigRead(ctx context.Context, d *schema.ResourceData, meta 
 	return nil
 }
 
-func resourceDockerConfigDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerConfigDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 	err := client.ConfigRemove(ctx, d.Id())
 	if err != nil {

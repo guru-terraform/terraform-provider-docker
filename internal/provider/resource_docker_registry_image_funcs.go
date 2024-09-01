@@ -22,7 +22,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func resourceDockerRegistryImageCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerRegistryImageCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 	providerConfig := meta.(*ProviderConfig)
 	name := d.Get("name").(string)
@@ -48,7 +48,7 @@ func resourceDockerRegistryImageCreate(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func resourceDockerRegistryImageRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerRegistryImageRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	providerConfig := meta.(*ProviderConfig)
 	name := d.Get("name").(string)
 	pushOpts := createPushImageOptions(name)
@@ -68,7 +68,7 @@ func resourceDockerRegistryImageRead(ctx context.Context, d *schema.ResourceData
 	return nil
 }
 
-func resourceDockerRegistryImageDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerRegistryImageDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	if d.Get("keep_remotely").(bool) {
 		return nil
 	}
@@ -91,7 +91,7 @@ func resourceDockerRegistryImageDelete(ctx context.Context, d *schema.ResourceDa
 	return nil
 }
 
-func resourceDockerRegistryImageUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerRegistryImageUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	return resourceDockerRegistryImageRead(ctx, d, meta)
 }
 
@@ -105,8 +105,8 @@ type internalPushImageOptions struct {
 	Tag                string
 }
 
-func createImageBuildOptions(buildOptions map[string]interface{}) types.ImageBuildOptions {
-	mapOfInterfacesToMapOfStrings := func(mapOfInterfaces map[string]interface{}) map[string]string {
+func createImageBuildOptions(buildOptions map[string]any) types.ImageBuildOptions {
+	mapOfInterfacesToMapOfStrings := func(mapOfInterfaces map[string]any) map[string]string {
 		mapOfStrings := make(map[string]string, len(mapOfInterfaces))
 		for k, v := range mapOfInterfaces {
 			mapOfStrings[k] = fmt.Sprintf("%v", v)
@@ -114,7 +114,7 @@ func createImageBuildOptions(buildOptions map[string]interface{}) types.ImageBui
 		return mapOfStrings
 	}
 
-	interfaceArrayToStringArray := func(interfaceArray []interface{}) []string {
+	interfaceArrayToStringArray := func(interfaceArray []any) []string {
 		stringArray := make([]string, len(interfaceArray))
 		for i, v := range interfaceArray {
 			stringArray[i] = fmt.Sprintf("%v", v)
@@ -122,7 +122,7 @@ func createImageBuildOptions(buildOptions map[string]interface{}) types.ImageBui
 		return stringArray
 	}
 
-	mapToBuildArgs := func(buildArgsOptions map[string]interface{}) map[string]*string {
+	mapToBuildArgs := func(buildArgsOptions map[string]any) map[string]*string {
 		buildArgs := make(map[string]*string, len(buildArgsOptions))
 		for k, v := range buildArgsOptions {
 			value := v.(string)
@@ -131,10 +131,10 @@ func createImageBuildOptions(buildOptions map[string]interface{}) types.ImageBui
 		return buildArgs
 	}
 
-	readULimits := func(options []interface{}) []*units.Ulimit {
+	readULimits := func(options []any) []*units.Ulimit {
 		ulimits := make([]*units.Ulimit, len(options))
 		for i, v := range options {
-			ulimitOption := v.(map[string]interface{})
+			ulimitOption := v.(map[string]any)
 			ulimit := units.Ulimit{
 				Name: ulimitOption["name"].(string),
 				Hard: int64(ulimitOption["hard"].(int)),
@@ -145,10 +145,10 @@ func createImageBuildOptions(buildOptions map[string]interface{}) types.ImageBui
 		return ulimits
 	}
 
-	readAuthConfigs := func(options []interface{}) map[string]registry.AuthConfig {
+	readAuthConfigs := func(options []any) map[string]registry.AuthConfig {
 		authConfigs := make(map[string]registry.AuthConfig, len(options))
 		for _, v := range options {
-			authOptions := v.(map[string]interface{})
+			authOptions := v.(map[string]any)
 			auth := registry.AuthConfig{
 				Username:      authOptions["user_name"].(string),
 				Password:      authOptions["password"].(string),
@@ -182,14 +182,14 @@ func createImageBuildOptions(buildOptions map[string]interface{}) types.ImageBui
 	buildImageOptions.NetworkMode = buildOptions["network_mode"].(string)
 	buildImageOptions.ShmSize = int64(buildOptions["shm_size"].(int))
 	buildImageOptions.Dockerfile = buildOptions["dockerfile"].(string)
-	buildImageOptions.Ulimits = readULimits(buildOptions["ulimit"].([]interface{}))
-	buildImageOptions.BuildArgs = mapToBuildArgs(buildOptions["build_args"].(map[string]interface{}))
-	buildImageOptions.AuthConfigs = readAuthConfigs(buildOptions["auth_config"].([]interface{}))
-	buildImageOptions.Labels = mapOfInterfacesToMapOfStrings(buildOptions["labels"].(map[string]interface{}))
+	buildImageOptions.Ulimits = readULimits(buildOptions["ulimit"].([]any))
+	buildImageOptions.BuildArgs = mapToBuildArgs(buildOptions["build_args"].(map[string]any))
+	buildImageOptions.AuthConfigs = readAuthConfigs(buildOptions["auth_config"].([]any))
+	buildImageOptions.Labels = mapOfInterfacesToMapOfStrings(buildOptions["labels"].(map[string]any))
 	buildImageOptions.Squash = buildOptions["squash"].(bool)
-	buildImageOptions.CacheFrom = interfaceArrayToStringArray(buildOptions["cache_from"].([]interface{}))
-	buildImageOptions.SecurityOpt = interfaceArrayToStringArray(buildOptions["security_opt"].([]interface{}))
-	buildImageOptions.ExtraHosts = interfaceArrayToStringArray(buildOptions["extra_hosts"].([]interface{}))
+	buildImageOptions.CacheFrom = interfaceArrayToStringArray(buildOptions["cache_from"].([]any))
+	buildImageOptions.SecurityOpt = interfaceArrayToStringArray(buildOptions["security_opt"].([]any))
+	buildImageOptions.ExtraHosts = interfaceArrayToStringArray(buildOptions["extra_hosts"].([]any))
 	buildImageOptions.Target = buildOptions["target"].(string)
 	buildImageOptions.SessionID = buildOptions["session_id"].(string)
 	buildImageOptions.Platform = buildOptions["platform"].(string)

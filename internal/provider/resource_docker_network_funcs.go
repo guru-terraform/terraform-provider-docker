@@ -21,7 +21,7 @@ const (
 	networkRemoveRefreshDelay               = 2 * time.Second
 )
 
-func resourceDockerNetworkCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerNetworkCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 
 	createOpts := network.CreateOptions{}
@@ -35,7 +35,7 @@ func resourceDockerNetworkCreate(ctx context.Context, d *schema.ResourceData, me
 		createOpts.Driver = v.(string)
 	}
 	if v, ok := d.GetOk("options"); ok {
-		createOpts.Options = mapTypeMapValsToString(v.(map[string]interface{}))
+		createOpts.Options = mapTypeMapValsToString(v.(map[string]any))
 	}
 	if v, ok := d.GetOk("internal"); ok {
 		createOpts.Internal = v.(bool)
@@ -62,7 +62,7 @@ func resourceDockerNetworkCreate(ctx context.Context, d *schema.ResourceData, me
 		ipamOptsSet = true
 	}
 	if v, ok := d.GetOk("ipam_options"); ok {
-		ipamOpts.Options = mapTypeMapValsToString(v.(map[string]interface{}))
+		ipamOpts.Options = mapTypeMapValsToString(v.(map[string]any))
 		ipamOptsSet = true
 	}
 
@@ -80,7 +80,7 @@ func resourceDockerNetworkCreate(ctx context.Context, d *schema.ResourceData, me
 	return resourceDockerNetworkRead(ctx, d, meta)
 }
 
-func resourceDockerNetworkRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerNetworkRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	log.Printf("[INFO] Waiting for network: '%s' to expose all fields: max '%v seconds'", d.Id(), networkReadRefreshTimeout)
 
 	stateConf := &retry.StateChangeConf{
@@ -101,7 +101,7 @@ func resourceDockerNetworkRead(ctx context.Context, d *schema.ResourceData, meta
 	return nil
 }
 
-func resourceDockerNetworkDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerNetworkDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	log.Printf("[INFO] Waiting for network: '%s' to be removed: max '%v seconds'", d.Id(), networkRemoveRefreshTimeout)
 
 	stateConf := &retry.StateChangeConf{
@@ -127,14 +127,14 @@ func ipamConfigSetToIpamConfigs(ipamConfigSet *schema.Set) []network.IPAMConfig 
 	ipamConfigs := make([]network.IPAMConfig, ipamConfigSet.Len())
 
 	for i, ipamConfigInt := range ipamConfigSet.List() {
-		ipamConfigRaw := ipamConfigInt.(map[string]interface{})
+		ipamConfigRaw := ipamConfigInt.(map[string]any)
 
 		ipamConfig := network.IPAMConfig{}
 		ipamConfig.Subnet = ipamConfigRaw["subnet"].(string)
 		ipamConfig.IPRange = ipamConfigRaw["ip_range"].(string)
 		ipamConfig.Gateway = ipamConfigRaw["gateway"].(string)
 
-		auxAddressRaw := ipamConfigRaw["aux_address"].(map[string]interface{})
+		auxAddressRaw := ipamConfigRaw["aux_address"].(map[string]any)
 		ipamConfig.AuxAddress = make(map[string]string, len(auxAddressRaw))
 		for k, v := range auxAddressRaw {
 			ipamConfig.AuxAddress[k] = v.(string)
@@ -147,8 +147,8 @@ func ipamConfigSetToIpamConfigs(ipamConfigSet *schema.Set) []network.IPAMConfig 
 }
 
 func resourceDockerNetworkReadRefreshFunc(ctx context.Context,
-	d *schema.ResourceData, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+	d *schema.ResourceData, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		client := meta.(*ProviderConfig).DockerClient
 		networkID := d.Id()
 
@@ -193,8 +193,8 @@ func resourceDockerNetworkReadRefreshFunc(ctx context.Context,
 }
 
 func resourceDockerNetworkRemoveRefreshFunc(ctx context.Context,
-	d *schema.ResourceData, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+	d *schema.ResourceData, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		client := meta.(*ProviderConfig).DockerClient
 		networkID := d.Id()
 

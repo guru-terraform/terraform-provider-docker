@@ -13,7 +13,7 @@ import (
 )
 
 func validateIntegerGeqThan(threshold int) schema.SchemaValidateDiagFunc {
-	return func(v interface{}, p cty.Path) diag.Diagnostics {
+	return func(v any, p cty.Path) diag.Diagnostics {
 		value := v.(int)
 		var diags diag.Diagnostics
 		if value < threshold {
@@ -29,7 +29,7 @@ func validateIntegerGeqThan(threshold int) schema.SchemaValidateDiagFunc {
 }
 
 func validateStringIsFloatRatio() schema.SchemaValidateDiagFunc {
-	return func(v interface{}, p cty.Path) diag.Diagnostics {
+	return func(v any, p cty.Path) diag.Diagnostics {
 		var diags diag.Diagnostics
 		switch t := v.(type) {
 		case string:
@@ -74,7 +74,7 @@ func validateStringIsFloatRatio() schema.SchemaValidateDiagFunc {
 }
 
 func validateDurationGeq0() schema.SchemaValidateDiagFunc {
-	return func(v interface{}, p cty.Path) diag.Diagnostics {
+	return func(v any, p cty.Path) diag.Diagnostics {
 		value := v.(string)
 		var diags diag.Diagnostics
 		dur, err := time.ParseDuration(value)
@@ -99,7 +99,7 @@ func validateDurationGeq0() schema.SchemaValidateDiagFunc {
 }
 
 func validateStringMatchesPattern(pattern string) schema.SchemaValidateDiagFunc {
-	return func(v interface{}, p cty.Path) diag.Diagnostics {
+	return func(v any, p cty.Path) diag.Diagnostics {
 		compiledRegex, err := regexp.Compile(pattern)
 		var diags diag.Diagnostics
 		if err != nil {
@@ -127,7 +127,7 @@ func validateStringMatchesPattern(pattern string) schema.SchemaValidateDiagFunc 
 }
 
 func validateStringIsBase64Encoded() schema.SchemaValidateDiagFunc {
-	return func(v interface{}, p cty.Path) diag.Diagnostics {
+	return func(v any, p cty.Path) diag.Diagnostics {
 		value := v.(string)
 		var diags diag.Diagnostics
 		if _, err := base64.StdEncoding.DecodeString(value); err != nil {
@@ -143,7 +143,7 @@ func validateStringIsBase64Encoded() schema.SchemaValidateDiagFunc {
 }
 
 func validateDockerContainerPath() schema.SchemaValidateDiagFunc {
-	return func(v interface{}, p cty.Path) diag.Diagnostics {
+	return func(v any, p cty.Path) diag.Diagnostics {
 		value := v.(string)
 		var diags diag.Diagnostics
 		if !regexp.MustCompile(`^[a-zA-Z]:[\\/]|^/`).MatchString(value) {

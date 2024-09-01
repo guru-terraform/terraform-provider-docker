@@ -31,13 +31,13 @@ import (
 
 const minBuildkitDockerVersion = "1.39"
 
-func resourceDockerImageCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerImageCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	cli := meta.(*ProviderConfig).DockerClient
 	imageName := d.Get("name").(string)
 
 	if value, ok := d.GetOk("build"); ok {
 		for _, rawBuild := range value.(*schema.Set).List() {
-			rawBuild := rawBuild.(map[string]interface{})
+			rawBuild := rawBuild.(map[string]any)
 
 			err := buildDockerImage(ctx, rawBuild, imageName, cli)
 			if err != nil {
@@ -54,7 +54,7 @@ func resourceDockerImageCreate(ctx context.Context, d *schema.ResourceData, meta
 	return resourceDockerImageRead(ctx, d, meta)
 }
 
-func resourceDockerImageRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerImageRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	cli := meta.(*ProviderConfig).DockerClient
 	var data Data
 	if err := fetchLocalImages(ctx, &data, cli); err != nil {
@@ -85,7 +85,7 @@ func resourceDockerImageRead(ctx context.Context, d *schema.ResourceData, meta i
 	return nil
 }
 
-func resourceDockerImageUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerImageUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	// We need to re-read in case switching parameters affects
 	// the value of "latest" or others
 	cli := meta.(*ProviderConfig).DockerClient
@@ -98,7 +98,7 @@ func resourceDockerImageUpdate(ctx context.Context, d *schema.ResourceData, meta
 	return resourceDockerImageRead(ctx, d, meta)
 }
 
-func resourceDockerImageDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerImageDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	cli := meta.(*ProviderConfig).DockerClient
 	// TODO mavogel: add retries. see e.g. service updateFailsAndRollbackConvergeConfig test
 	err := removeImage(ctx, d, cli)
@@ -319,7 +319,7 @@ func findImage(ctx context.Context, imageName string, client *client.Client, aut
 	return nil, fmt.Errorf("unable to find or pull image %s", imageName)
 }
 
-func buildDockerImage(ctx context.Context, rawBuild map[string]interface{}, imageName string, client *client.Client) error {
+func buildDockerImage(ctx context.Context, rawBuild map[string]any, imageName string, client *client.Client) error {
 	var (
 		err error
 	)
@@ -328,7 +328,7 @@ func buildDockerImage(ctx context.Context, rawBuild map[string]interface{}, imag
 	buildOptions := createImageBuildOptions(rawBuild)
 
 	tags := []string{imageName}
-	for _, t := range rawBuild["tag"].([]interface{}) {
+	for _, t := range rawBuild["tag"].([]any) {
 		tags = append(tags, t.(string))
 	}
 	buildOptions.Tags = tags

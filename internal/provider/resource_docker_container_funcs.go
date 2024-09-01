@@ -45,7 +45,7 @@ var (
 // the time in the create and read func
 var creationTime time.Time
 
-func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	var err error
 	cli := meta.(*ProviderConfig).DockerClient
 	authConfigs := meta.(*ProviderConfig).AuthConfigs
@@ -75,7 +75,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("command"); ok {
-		config.Cmd = stringListToStringSlice(v.([]interface{}))
+		config.Cmd = stringListToStringSlice(v.([]any))
 		for _, v := range config.Cmd {
 			if v == "" {
 				return diag.Errorf("values for command may not be empty")
@@ -84,7 +84,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("entrypoint"); ok {
-		config.Entrypoint = stringListToStringSlice(v.([]interface{}))
+		config.Entrypoint = stringListToStringSlice(v.([]any))
 	}
 
 	if v, ok := d.GetOk("user"); ok {
@@ -95,7 +95,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	portBindings := map[nat.Port][]nat.PortBinding{}
 
 	if v, ok := d.GetOk("ports"); ok {
-		exposedPorts, portBindings = portSetToDockerPorts(v.([]interface{}))
+		exposedPorts, portBindings = portSetToDockerPorts(v.([]any))
 	}
 	if len(exposedPorts) != 0 {
 		config.ExposedPorts = exposedPorts
@@ -132,11 +132,11 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 
 	if value, ok := d.GetOk("healthcheck"); ok {
 		config.Healthcheck = &container.HealthConfig{}
-		if len(value.([]interface{})) > 0 {
-			for _, rawHealthCheck := range value.([]interface{}) {
-				rawHealthCheck := rawHealthCheck.(map[string]interface{})
+		if len(value.([]any)) > 0 {
+			for _, rawHealthCheck := range value.([]any) {
+				rawHealthCheck := rawHealthCheck.(map[string]any)
 				if testCommand, ok := rawHealthCheck["test"]; ok {
-					config.Healthcheck.Test = stringListToStringSlice(testCommand.([]interface{}))
+					config.Healthcheck.Test = stringListToStringSlice(testCommand.([]any))
 				}
 				if rawInterval, ok := rawHealthCheck["interval"]; ok {
 					config.Healthcheck.Interval, _ = time.ParseDuration(rawInterval.(string))
@@ -158,7 +158,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 
 	if value, ok := d.GetOk("mounts"); ok {
 		for _, rawMount := range value.(*schema.Set).List() {
-			rawMount := rawMount.(map[string]interface{})
+			rawMount := rawMount.(map[string]any)
 			mountType := mount.Type(rawMount["type"].(string))
 			mountInstance := mount.Mount{
 				Type:   mountType,
@@ -171,10 +171,10 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 
 			if mountType == mount.TypeBind {
 				if value, ok := rawMount["bind_options"]; ok {
-					if len(value.([]interface{})) > 0 {
+					if len(value.([]any)) > 0 {
 						mountInstance.BindOptions = &mount.BindOptions{}
-						for _, rawBindOptions := range value.([]interface{}) {
-							rawBindOptions := rawBindOptions.(map[string]interface{})
+						for _, rawBindOptions := range value.([]any) {
+							rawBindOptions := rawBindOptions.(map[string]any)
 							if value, ok := rawBindOptions["propagation"]; ok {
 								mountInstance.BindOptions.Propagation = mount.Propagation(value.(string))
 							}
@@ -183,10 +183,10 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 				}
 			} else if mountType == mount.TypeVolume {
 				if value, ok := rawMount["volume_options"]; ok {
-					if len(value.([]interface{})) > 0 {
+					if len(value.([]any)) > 0 {
 						mountInstance.VolumeOptions = &mount.VolumeOptions{}
-						for _, rawVolumeOptions := range value.([]interface{}) {
-							rawVolumeOptions := rawVolumeOptions.(map[string]interface{})
+						for _, rawVolumeOptions := range value.([]any) {
+							rawVolumeOptions := rawVolumeOptions.(map[string]any)
 							if value, ok := rawVolumeOptions["no_copy"]; ok {
 								mountInstance.VolumeOptions.NoCopy = value.(bool)
 							}
@@ -204,17 +204,17 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 								if mountInstance.VolumeOptions.DriverConfig == nil {
 									mountInstance.VolumeOptions.DriverConfig = &mount.Driver{}
 								}
-								mountInstance.VolumeOptions.DriverConfig.Options = mapTypeMapValsToString(value.(map[string]interface{}))
+								mountInstance.VolumeOptions.DriverConfig.Options = mapTypeMapValsToString(value.(map[string]any))
 							}
 						}
 					}
 				}
 			} else if mountType == mount.TypeTmpfs {
 				if value, ok := rawMount["tmpfs_options"]; ok {
-					if len(value.([]interface{})) > 0 {
+					if len(value.([]any)) > 0 {
 						mountInstance.TmpfsOptions = &mount.TmpfsOptions{}
-						for _, rawTmpfsOptions := range value.([]interface{}) {
-							rawTmpfsOptions := rawTmpfsOptions.(map[string]interface{})
+						for _, rawTmpfsOptions := range value.([]any) {
+							rawTmpfsOptions := rawTmpfsOptions.(map[string]any)
 							if value, ok := rawTmpfsOptions["size_bytes"]; ok {
 								mountInstance.TmpfsOptions.SizeBytes = (int64)(value.(int))
 							}
@@ -248,7 +248,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("tmpfs"); ok {
-		hostConfig.Tmpfs = mapTypeMapValsToString(v.(map[string]interface{}))
+		hostConfig.Tmpfs = mapTypeMapValsToString(v.(map[string]any))
 	}
 
 	if len(portBindings) != 0 {
@@ -269,7 +269,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 
 	if v, ok := d.GetOk("capabilities"); ok {
 		for _, capInt := range v.(*schema.Set).List() {
-			capa := capInt.(map[string]interface{})
+			capa := capInt.(map[string]any)
 			hostConfig.CapAdd = stringSetToStringSlice(capa["add"].(*schema.Set))
 			hostConfig.CapDrop = stringSetToStringSlice(capa["drop"].(*schema.Set))
 			break
@@ -321,7 +321,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("log_opts"); ok {
-		hostConfig.LogConfig.Config = mapTypeMapValsToString(v.(map[string]interface{}))
+		hostConfig.LogConfig.Config = mapTypeMapValsToString(v.(map[string]any))
 	}
 
 	networkingConfig := &network.NetworkingConfig{}
@@ -337,7 +337,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("sysctls"); ok {
-		hostConfig.Sysctls = mapTypeMapValsToString(v.(map[string]interface{}))
+		hostConfig.Sysctls = mapTypeMapValsToString(v.(map[string]any))
 	}
 	if v, ok := d.GetOk("ipc_mode"); ok {
 		hostConfig.IpcMode = container.IpcMode(v.(string))
@@ -375,7 +375,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	hostConfig.Init = &init
 
 	if v, ok := d.GetOk("storage_opts"); ok {
-		hostConfig.StorageOpt = mapTypeMapValsToString(v.(map[string]interface{}))
+		hostConfig.StorageOpt = mapTypeMapValsToString(v.(map[string]any))
 	}
 
 	var retContainer container.CreateResponse
@@ -396,17 +396,17 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 		}
 
 		for _, rawNetwork := range v.(*schema.Set).List() {
-			networkID := rawNetwork.(map[string]interface{})["name"].(string)
+			networkID := rawNetwork.(map[string]any)["name"].(string)
 
 			endpointConfig := &network.EndpointSettings{}
 			endpointIPAMConfig := &network.EndpointIPAMConfig{}
-			if v, ok := rawNetwork.(map[string]interface{})["aliases"]; ok {
+			if v, ok := rawNetwork.(map[string]any)["aliases"]; ok {
 				endpointConfig.Aliases = stringSetToStringSlice(v.(*schema.Set))
 			}
-			if v, ok := rawNetwork.(map[string]interface{})["ipv4_address"]; ok {
+			if v, ok := rawNetwork.(map[string]any)["ipv4_address"]; ok {
 				endpointIPAMConfig.IPv4Address = v.(string)
 			}
-			if v, ok := rawNetwork.(map[string]interface{})["ipv6_address"]; ok {
+			if v, ok := rawNetwork.(map[string]any)["ipv6_address"]; ok {
 				endpointIPAMConfig.IPv6Address = v.(string)
 			}
 			endpointConfig.IPAMConfig = endpointIPAMConfig
@@ -421,9 +421,9 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 
 		var mode int64
 		for _, upload := range v.(*schema.Set).List() {
-			content := upload.(map[string]interface{})["content"].(string)
-			contentBase64 := upload.(map[string]interface{})["content_base64"].(string)
-			source := upload.(map[string]interface{})["source"].(string)
+			content := upload.(map[string]any)["content"].(string)
+			contentBase64 := upload.(map[string]any)["content_base64"].(string)
+			source := upload.(map[string]any)["source"].(string)
 
 			testParams := []string{content, contentBase64, source}
 			setParams := 0
@@ -455,8 +455,8 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 				}
 				contentToUpload = string(sourceContent)
 			}
-			file := upload.(map[string]interface{})["file"].(string)
-			executable := upload.(map[string]interface{})["executable"].(bool)
+			file := upload.(map[string]any)["file"].(string)
+			executable := upload.(map[string]any)["executable"].(bool)
 
 			buf := new(bytes.Buffer)
 			tw := tar.NewWriter(buf)
@@ -583,7 +583,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	return resourceDockerContainerRead(ctx, d, meta)
 }
 
-func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	containerReadRefreshTimeoutMilliseconds := d.Get("container_read_refresh_timeout_milliseconds").(int)
 	// Ensure the timeout can never be 0, the default integer value.
 	// This also ensures imported resources will get the default of 15 seconds
@@ -690,8 +690,8 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 	d.Set("working_dir", cont.Config.WorkingDir)
 	if len(cont.HostConfig.CapAdd) > 0 || len(cont.HostConfig.CapDrop) > 0 {
 		// TODO implement DiffSuppressFunc
-		d.Set("capabilities", []interface{}{
-			map[string]interface{}{
+		d.Set("capabilities", []any{
+			map[string]any{
 				"add":  cont.HostConfig.CapAdd,
 				"drop": cont.HostConfig.CapDrop,
 			},
@@ -737,8 +737,8 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 	d.Set("userns_mode", cont.HostConfig.UsernsMode)
 	// "upload" can't be imported
 	if cont.Config.Healthcheck != nil {
-		d.Set("healthcheck", []interface{}{
-			map[string]interface{}{
+		d.Set("healthcheck", []any{
+			map[string]any{
 				"test":         cont.Config.Healthcheck.Test,
 				"interval":     cont.Config.Healthcheck.Interval.String(),
 				"timeout":      cont.Config.Healthcheck.Timeout.String(),
@@ -766,8 +766,8 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 }
 
 func resourceDockerContainerReadRefreshFunc(ctx context.Context,
-	d *schema.ResourceData, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+	d *schema.ResourceData, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		client := meta.(*ProviderConfig).DockerClient
 		containerID := d.Id()
 
@@ -816,7 +816,7 @@ func resourceDockerContainerReadRefreshFunc(ctx context.Context,
 	}
 }
 
-func resourceDockerContainerUpdate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerContainerUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	attrs := []string{
 		"restart", "max_retry_count", "cpu_shares", "memory", "cpu_set", "memory_swap",
 	}
@@ -864,7 +864,7 @@ func resourceDockerContainerUpdate(ctx context.Context, d *schema.ResourceData, 
 	return nil
 }
 
-func resourceDockerContainerDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerContainerDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 
 	if !d.Get("attach").(bool) {

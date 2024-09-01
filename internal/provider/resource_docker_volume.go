@@ -68,7 +68,7 @@ func resourceDockerVolume() *schema.Resource {
 			{
 				Version: 0,
 				Type:    resourceDockerVolumeV0().CoreConfigSchema().ImpliedType(),
-				Upgrade: func(ctx context.Context, rawState map[string]interface{}, meta interface{}) (map[string]interface{}, error) {
+				Upgrade: func(ctx context.Context, rawState map[string]any, meta any) (map[string]any, error) {
 					return replaceLabelsMapFieldWithSetField(rawState), nil
 				},
 			},
@@ -76,7 +76,7 @@ func resourceDockerVolume() *schema.Resource {
 	}
 }
 
-func resourceDockerVolumeCreate(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerVolumeCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 
 	createOpts := volume.CreateOptions{}
@@ -91,7 +91,7 @@ func resourceDockerVolumeCreate(ctx context.Context, d *schema.ResourceData, met
 		createOpts.Driver = v.(string)
 	}
 	if v, ok := d.GetOk("driver_opts"); ok {
-		createOpts.DriverOpts = mapTypeMapValsToString(v.(map[string]interface{}))
+		createOpts.DriverOpts = mapTypeMapValsToString(v.(map[string]any))
 	}
 
 	var err error
@@ -106,7 +106,7 @@ func resourceDockerVolumeCreate(ctx context.Context, d *schema.ResourceData, met
 	return resourceDockerVolumeRead(ctx, d, meta)
 }
 
-func resourceDockerVolumeRead(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerVolumeRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	client := meta.(*ProviderConfig).DockerClient
 
 	volume, err := client.VolumeInspect(ctx, d.Id())
@@ -127,7 +127,7 @@ func resourceDockerVolumeRead(ctx context.Context, d *schema.ResourceData, meta 
 	return nil
 }
 
-func resourceDockerVolumeDelete(ctx context.Context, d *schema.ResourceData, meta interface{}) diag.Diagnostics {
+func resourceDockerVolumeDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	log.Printf("[INFO] Waiting for volume: '%s' to get removed: max '%v seconds'", d.Id(), volumeReadRefreshTimeout)
 
 	stateConf := &retry.StateChangeConf{
@@ -150,8 +150,8 @@ func resourceDockerVolumeDelete(ctx context.Context, d *schema.ResourceData, met
 }
 
 func resourceDockerVolumeRemoveRefreshFunc(
-	volumeID string, meta interface{}) retry.StateRefreshFunc {
-	return func() (interface{}, string, error) {
+	volumeID string, meta any) retry.StateRefreshFunc {
+	return func() (any, string, error) {
 		client := meta.(*ProviderConfig).DockerClient
 		forceDelete := true
 

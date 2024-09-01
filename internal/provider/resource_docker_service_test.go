@@ -23,12 +23,12 @@ import (
 // -----------    UNIT  TESTS   -----------
 // ----------------------------------------
 func TestMigrateServiceV1ToV2_empty_restart_policy_and_auth(t *testing.T) {
-	v1State := map[string]interface{}{
+	v1State := map[string]any{
 		"name": "volume-name",
-		"task_spec": []interface{}{
-			map[string]interface{}{
-				"container_spec": []interface{}{
-					map[string]interface{}{
+		"task_spec": []any{
+			map[string]any{
+				"container_spec": []any{
+					map[string]any{
 						"image":             "repo:tag",
 						"stop_grace_period": "10s",
 					},
@@ -56,17 +56,17 @@ func TestMigrateServiceV1ToV2_empty_restart_policy_and_auth(t *testing.T) {
 	}
 }
 func TestMigrateServiceV1ToV2_with_restart_policy(t *testing.T) {
-	v1State := map[string]interface{}{
+	v1State := map[string]any{
 		"name": "volume-name",
-		"task_spec": []interface{}{
-			map[string]interface{}{
-				"container_spec": []interface{}{
-					map[string]interface{}{
+		"task_spec": []any{
+			map[string]any{
+				"container_spec": []any{
+					map[string]any{
 						"image":             "repo:tag",
 						"stop_grace_period": "10s",
 					},
 				},
-				"restart_policy": map[string]interface{}{
+				"restart_policy": map[string]any{
 					"condition":    "on-failure",
 					"delay":        "3s",
 					"max_attempts": 4,
@@ -96,17 +96,17 @@ func TestMigrateServiceV1ToV2_with_restart_policy(t *testing.T) {
 }
 
 func TestMigrateServiceV1ToV2_with_auth(t *testing.T) {
-	v1State := map[string]interface{}{
-		"auth": map[string]interface{}{
+	v1State := map[string]any{
+		"auth": map[string]any{
 			"server_address": "docker-reg.acme.com",
 			"username":       "user",
 			"password":       "pass",
 		},
 		"name": "volume-name",
-		"task_spec": []interface{}{
-			map[string]interface{}{
-				"container_spec": []interface{}{
-					map[string]interface{}{
+		"task_spec": []any{
+			map[string]any{
+				"container_spec": []any{
+					map[string]any{
 						"image":             "repo:tag",
 						"stop_grace_period": "10s",
 					},
@@ -135,19 +135,19 @@ func TestMigrateServiceV1ToV2_with_auth(t *testing.T) {
 }
 
 func TestMigrateServiceLabelState_empty_labels(t *testing.T) {
-	v0State := map[string]interface{}{
+	v0State := map[string]any{
 		"name": "volume-name",
-		"task_spec": []interface{}{
-			map[string]interface{}{
-				"container_spec": []interface{}{
-					map[string]interface{}{
+		"task_spec": []any{
+			map[string]any{
+				"container_spec": []any{
+					map[string]any{
 						"image": "repo:tag",
-						"mounts": []interface{}{
-							map[string]interface{}{
+						"mounts": []any{
+							map[string]any{
 								"target": "path/to/target",
 								"type":   "bind",
-								"volume_options": []interface{}{
-									map[string]interface{}{},
+								"volume_options": []any{
+									map[string]any{},
 								},
 							},
 						},
@@ -176,24 +176,24 @@ func TestMigrateServiceLabelState_empty_labels(t *testing.T) {
 }
 
 func TestMigrateServiceLabelState_with_labels(t *testing.T) {
-	v0State := map[string]interface{}{
+	v0State := map[string]any{
 		"name": "volume-name",
-		"task_spec": []interface{}{
-			map[string]interface{}{
-				"container_spec": []interface{}{
-					map[string]interface{}{
+		"task_spec": []any{
+			map[string]any{
+				"container_spec": []any{
+					map[string]any{
 						"image": "repo:tag",
-						"labels": map[string]interface{}{
+						"labels": map[string]any{
 							"type": "container",
 							"env":  "dev",
 						},
-						"mounts": []interface{}{
-							map[string]interface{}{
+						"mounts": []any{
+							map[string]any{
 								"target": "path/to/target",
 								"type":   "bind",
-								"volume_options": []interface{}{
-									map[string]interface{}{
-										"labels": map[string]interface{}{
+								"volume_options": []any{
+									map[string]any{
+										"labels": map[string]any{
 											"type": "mount",
 										},
 									},
@@ -204,7 +204,7 @@ func TestMigrateServiceLabelState_with_labels(t *testing.T) {
 				},
 			},
 		},
-		"labels": map[string]interface{}{
+		"labels": map[string]any{
 			"foo": "bar",
 			"env": "dev",
 		},

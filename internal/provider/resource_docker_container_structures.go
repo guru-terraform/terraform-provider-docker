@@ -31,8 +31,8 @@ func (s byPortAndProtocol) Less(i, j int) bool {
 	return iPort < jPort
 }
 
-func flattenContainerPorts(in nat.PortMap) []interface{} {
-	out := make([]interface{}, 0)
+func flattenContainerPorts(in nat.PortMap) []any {
+	out := make([]any, 0)
 
 	var internalPortKeys []string
 	for portAndProtocolKeys := range in {
@@ -41,7 +41,7 @@ func flattenContainerPorts(in nat.PortMap) []interface{} {
 	sort.Sort(byPortAndProtocol(internalPortKeys))
 
 	for _, portKey := range internalPortKeys {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 
 		portBindings := in[nat.Port(portKey)]
 		for _, portBinding := range portBindings {
@@ -58,15 +58,15 @@ func flattenContainerPorts(in nat.PortMap) []interface{} {
 	return out
 }
 
-func flattenContainerNetworks(in *types.NetworkSettings) []interface{} {
-	out := make([]interface{}, 0)
+func flattenContainerNetworks(in *types.NetworkSettings) []any {
+	out := make([]any, 0)
 	if in == nil || in.Networks == nil || len(in.Networks) == 0 {
 		return out
 	}
 
 	networks := in.Networks
 	for networkName, networkData := range networks {
-		m := make(map[string]interface{})
+		m := make(map[string]any)
 		m["network_name"] = networkName
 		m["ip_address"] = networkData.IPAddress
 		m["ip_prefix_length"] = networkData.IPPrefixLen
@@ -80,7 +80,7 @@ func flattenContainerNetworks(in *types.NetworkSettings) []interface{} {
 	return out
 }
 
-func stringListToStringSlice(stringList []interface{}) []string {
+func stringListToStringSlice(stringList []any) []string {
 	ret := []string{}
 	for _, v := range stringList {
 		if v == nil {
@@ -118,7 +118,7 @@ func stringSetToMapStringString(stringSet *schema.Set) map[string]string {
 	return ret
 }
 
-func mapTypeMapValsToString(typeMap map[string]interface{}) map[string]string {
+func mapTypeMapValsToString(typeMap map[string]any) map[string]string {
 	mapped := make(map[string]string, len(typeMap))
 	for k, v := range typeMap {
 		mapped[k] = v.(string)
@@ -127,7 +127,7 @@ func mapTypeMapValsToString(typeMap map[string]interface{}) map[string]string {
 }
 
 // mapTypeMapValsToStringSlice maps a map to a slice with '=': e.g. foo = "bar" -> 'foo=bar'
-func mapTypeMapValsToStringSlice(typeMap map[string]interface{}) []string {
+func mapTypeMapValsToStringSlice(typeMap map[string]any) []string {
 	mapped := make([]string, 0)
 	for k, v := range typeMap {
 		if len(k) > 0 {
@@ -137,12 +137,12 @@ func mapTypeMapValsToStringSlice(typeMap map[string]interface{}) []string {
 	return mapped
 }
 
-func portSetToDockerPorts(ports []interface{}) (map[nat.Port]struct{}, map[nat.Port][]nat.PortBinding) {
+func portSetToDockerPorts(ports []any) (map[nat.Port]struct{}, map[nat.Port][]nat.PortBinding) {
 	retExposedPorts := map[nat.Port]struct{}{}
 	retPortBindings := map[nat.Port][]nat.PortBinding{}
 
 	for _, portInt := range ports {
-		port := portInt.(map[string]interface{})
+		port := portInt.(map[string]any)
 		internal := port["internal"].(int)
 		protocol := port["protocol"].(string)
 
@@ -173,7 +173,7 @@ func ulimitsToDockerUlimits(extraUlimits *schema.Set) []*units.Ulimit {
 	retExtraUlimits := []*units.Ulimit{}
 
 	for _, ulimitInt := range extraUlimits.List() {
-		ulimits := ulimitInt.(map[string]interface{})
+		ulimits := ulimitInt.(map[string]any)
 		u := &units.Ulimit{
 			Name: ulimits["name"].(string),
 			Soft: int64(ulimits["soft"].(int)),
@@ -189,7 +189,7 @@ func extraHostsSetToContainerExtraHosts(extraHosts *schema.Set) []string {
 	retExtraHosts := []string{}
 
 	for _, hostInt := range extraHosts.List() {
-		host := hostInt.(map[string]interface{})
+		host := hostInt.(map[string]any)
 		ip := host["ip"].(string)
 		hostname := host["host"].(string)
 		retExtraHosts = append(retExtraHosts, hostname+":"+ip)
@@ -204,7 +204,7 @@ func volumeSetToDockerVolumes(volumes *schema.Set) (map[string]struct{}, []strin
 	retVolumeFromContainers := []string{}
 
 	for _, volumeInt := range volumes.List() {
-		volume := volumeInt.(map[string]interface{})
+		volume := volumeInt.(map[string]any)
 		fromContainer := volume["from_container"].(string)
 		containerPath := volume["container_path"].(string)
 		volumeName := volume["volume_name"].(string)
@@ -238,7 +238,7 @@ func volumeSetToDockerVolumes(volumes *schema.Set) (map[string]struct{}, []strin
 func deviceSetToDockerDevices(devices *schema.Set) []container.DeviceMapping {
 	retDevices := []container.DeviceMapping{}
 	for _, deviceInt := range devices.List() {
-		deviceMap := deviceInt.(map[string]interface{})
+		deviceMap := deviceInt.(map[string]any)
 		hostPath := deviceMap["host_path"].(string)
 		containerPath := deviceMap["container_path"].(string)
 		permissions := deviceMap["permissions"].(string)
@@ -261,17 +261,17 @@ func deviceSetToDockerDevices(devices *schema.Set) []container.DeviceMapping {
 	return retDevices
 }
 
-func getDockerContainerMounts(container types.ContainerJSON) []map[string]interface{} {
-	mounts := []map[string]interface{}{}
+func getDockerContainerMounts(container types.ContainerJSON) []map[string]any {
+	mounts := []map[string]any{}
 	for _, mount := range container.HostConfig.Mounts {
-		m := map[string]interface{}{
+		m := map[string]any{
 			"target":    mount.Target,
 			"source":    mount.Source,
 			"type":      mount.Type,
 			"read_only": mount.ReadOnly,
 		}
 		if mount.BindOptions != nil {
-			m["bind_options"] = []map[string]interface{}{
+			m["bind_options"] = []map[string]any{
 				{
 					"propagation": mount.BindOptions.Propagation,
 				},
@@ -285,7 +285,7 @@ func getDockerContainerMounts(container types.ContainerJSON) []map[string]interf
 					"volume": v,
 				})
 			}
-			opt := map[string]interface{}{
+			opt := map[string]any{
 				"no_copy": mount.VolumeOptions.NoCopy,
 				"labels":  labels,
 			}
@@ -293,12 +293,12 @@ func getDockerContainerMounts(container types.ContainerJSON) []map[string]interf
 				opt["driver_name"] = mount.VolumeOptions.DriverConfig.Name
 				opt["driver_options"] = mount.VolumeOptions.DriverConfig.Options
 			}
-			m["volume_options"] = []map[string]interface{}{
+			m["volume_options"] = []map[string]any{
 				opt,
 			}
 		}
 		if mount.TmpfsOptions != nil {
-			m["tmpfs_options"] = []map[string]interface{}{
+			m["tmpfs_options"] = []map[string]any{
 				{
 					"size_bytes": mount.TmpfsOptions.SizeBytes,
 					"mode":       mount.TmpfsOptions.Mode,
@@ -311,11 +311,11 @@ func getDockerContainerMounts(container types.ContainerJSON) []map[string]interf
 	return mounts
 }
 
-func flattenExtraHosts(in []string) []interface{} {
-	extraHosts := make([]interface{}, len(in))
+func flattenExtraHosts(in []string) []any {
+	extraHosts := make([]any, len(in))
 	for i, extraHost := range in {
 		extraHostSplit := strings.Split(extraHost, ":")
-		extraHosts[i] = map[string]interface{}{
+		extraHosts[i] = map[string]any{
 			"host": extraHostSplit[0],
 			"ip":   extraHostSplit[1],
 		}
@@ -324,10 +324,10 @@ func flattenExtraHosts(in []string) []interface{} {
 	return extraHosts
 }
 
-func flattenUlimits(in []*units.Ulimit) []interface{} {
-	ulimits := make([]interface{}, len(in))
+func flattenUlimits(in []*units.Ulimit) []any {
+	ulimits := make([]any, len(in))
 	for i, ul := range in {
-		ulimits[i] = map[string]interface{}{
+		ulimits[i] = map[string]any{
 			"name": ul.Name,
 			"soft": ul.Soft,
 			"hard": ul.Hard,
@@ -337,10 +337,10 @@ func flattenUlimits(in []*units.Ulimit) []interface{} {
 	return ulimits
 }
 
-func flattenDevices(in []container.DeviceMapping) []interface{} {
-	devices := make([]interface{}, len(in))
+func flattenDevices(in []container.DeviceMapping) []any {
+	devices := make([]any, len(in))
 	for i, device := range in {
-		devices[i] = map[string]interface{}{
+		devices[i] = map[string]any{
 			"host_path":      device.PathOnHost,
 			"container_path": device.PathInContainer,
 			"permissions":    device.CgroupPermissions,
