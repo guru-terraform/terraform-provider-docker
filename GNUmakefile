@@ -78,6 +78,7 @@ test-compile:
 	go test -c $(TEST) $(TESTARGS)
 
 website-generation:
+	rm -rf ./docs/*
 	go generate
 
 website-link-check:
