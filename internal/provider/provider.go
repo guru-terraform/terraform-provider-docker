@@ -171,10 +171,10 @@ func New(version string) func() *schema.Provider {
 
 func configure(version string, p *schema.Provider) func(context.Context, *schema.ResourceData) (any, diag.Diagnostics) {
 	return func(ctx context.Context, d *schema.ResourceData) (any, diag.Diagnostics) {
-		SSHOptsI := d.Get("ssh_opts").([]string)
+		SSHOptsI := d.Get("ssh_opts").([]any)
 		SSHOpts := make([]string, len(SSHOptsI))
 		for i, s := range SSHOptsI {
-			SSHOpts[i] = s
+			SSHOpts[i] = s.(string)
 		}
 		config := Config{
 			Host:     d.Get("host").(string),
