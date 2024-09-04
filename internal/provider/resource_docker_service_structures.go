@@ -18,7 +18,7 @@ import (
 // flatten API objects to the terraform schema
 // ////////////
 // see https://learn.hashicorp.com/tutorials/terraform/provider-create?in=terraform/providers#add-flattening-functions
-func flattenTaskSpec(in swarm.TaskSpec, d *schema.ResourceData) []any {
+func flattenTaskSpec(in swarm.TaskSpec, _ *schema.ResourceData) []any {
 	m := make(map[string]any)
 	if in.ContainerSpec != nil {
 		m["container_spec"] = flattenContainerSpec(in.ContainerSpec)
@@ -65,11 +65,12 @@ func flattenReplicated(in *swarm.ReplicatedService) []any {
 	m := make(map[string]any)
 	if in != nil {
 		if in.Replicas != nil {
-			replicas := int(*in.Replicas)
-			m["replicas"] = replicas
+			replicas := *in.Replicas
+			m["replicas"] = int(replicas)
 		}
 	}
 	out = append(out, m)
+
 	return out
 }
 
@@ -87,6 +88,7 @@ func flattenServiceUpdateOrRollbackConfig(in *swarm.UpdateConfig) []any {
 	m["max_failure_ratio"] = strconv.FormatFloat(float64(in.MaxFailureRatio), 'f', 1, 64)
 	m["order"] = in.Order
 	out = append(out, m)
+
 	return out
 }
 
@@ -97,6 +99,7 @@ func flattenServiceEndpoint(in swarm.Endpoint) []any {
 	m["ports"] = flattenServicePorts(in.Ports)
 
 	out = append(out, m)
+
 	return out
 }
 
@@ -107,10 +110,11 @@ func flattenServiceEndpointSpec(in *swarm.EndpointSpec) []any {
 	m["ports"] = flattenServicePorts(in.Ports)
 
 	out = append(out, m)
+
 	return out
 }
 
-// /// start TaskSpec
+// /// start TaskSpec.
 func flattenContainerSpec(in *swarm.ContainerSpec) []any {
 	out := make([]any, 0)
 	m := make(map[string]any)
@@ -178,6 +182,7 @@ func flattenContainerSpec(in *swarm.ContainerSpec) []any {
 		m["sysctl"] = in.Sysctls
 	}
 	out = append(out, m)
+
 	return out
 }
 
@@ -209,6 +214,7 @@ func flattenPrivileges(in *swarm.Privileges) []any {
 		m["se_linux_context"] = seLinuxContext
 	}
 	out[0] = m
+
 	return out
 }
 
@@ -266,6 +272,7 @@ func flattenServiceMounts(in []mount.Mount) *schema.Set {
 	containerSpecResource := taskSpecResource.Schema["container_spec"].Elem.(*schema.Resource)
 	mountsResource := containerSpecResource.Schema["mounts"].Elem.(*schema.Resource)
 	f := schema.HashResource(mountsResource)
+
 	return schema.NewSet(f, out)
 }
 
@@ -284,6 +291,7 @@ func flattenServiceHealthcheck(in *container.HealthConfig) []any {
 	m["start_period"] = shortDur(in.StartPeriod)
 	m["retries"] = in.Retries
 	out[0] = m
+
 	return out
 }
 
@@ -301,6 +309,7 @@ func flattenServiceHosts(in []string) *schema.Set {
 	containerSpecResource := taskSpecResource.Schema["container_spec"].Elem.(*schema.Resource)
 	hostsResource := containerSpecResource.Schema["hosts"].Elem.(*schema.Resource)
 	f := schema.HashResource(hostsResource)
+
 	return schema.NewSet(f, out)
 }
 
@@ -321,6 +330,7 @@ func flattenServiceDNSConfig(in *swarm.DNSConfig) []any {
 		m["options"] = in.Options
 	}
 	out[0] = m
+
 	return out
 }
 
@@ -348,6 +358,7 @@ func flattenServiceSecrets(in []*swarm.SecretReference) *schema.Set {
 	containerSpecResource := taskSpecResource.Schema["container_spec"].Elem.(*schema.Resource)
 	secretsResource := containerSpecResource.Schema["secrets"].Elem.(*schema.Resource)
 	f := schema.HashResource(secretsResource)
+
 	return schema.NewSet(f, out)
 }
 
@@ -375,6 +386,7 @@ func flattenServiceConfigs(in []*swarm.ConfigReference) *schema.Set {
 	containerSpecResource := taskSpecResource.Schema["container_spec"].Elem.(*schema.Resource)
 	configsResource := containerSpecResource.Schema["configs"].Elem.(*schema.Resource)
 	f := schema.HashResource(configsResource)
+
 	return schema.NewSet(f, out)
 }
 
@@ -387,6 +399,7 @@ func flattenTaskResources(in *swarm.ResourceRequirements) []any {
 		m["reservation"] = flattenResourceReservations(in.Reservations)
 		out = append(out, m)
 	}
+
 	return out
 }
 
@@ -397,9 +410,10 @@ func flattenResourceLimits(in *swarm.Limit) []any {
 		m["nano_cpus"] = in.NanoCPUs
 		m["memory_bytes"] = in.MemoryBytes
 		// TODO mavogel add pids
-		// m["pids"] = in.Pids
+		m["pids"] = in.Pids
 		out = append(out, m)
 	}
+
 	return out
 }
 
@@ -412,6 +426,7 @@ func flattenResourceReservations(in *swarm.Resources) []any {
 		m["generic_resources"] = flattenResourceGenericResource(in.GenericResources)
 		out = append(out, m)
 	}
+
 	return out
 }
 
@@ -426,13 +441,15 @@ func flattenResourceGenericResource(in []swarm.GenericResource) []any {
 				named = append(named, genericResource.NamedResourceSpec.Kind+"="+genericResource.NamedResourceSpec.Value)
 			}
 			if genericResource.DiscreteResourceSpec != nil {
-				discrete = append(discrete, genericResource.DiscreteResourceSpec.Kind+"="+strconv.Itoa(int(genericResource.DiscreteResourceSpec.Value)))
+				discrete = append(discrete,
+					genericResource.DiscreteResourceSpec.Kind+"="+strconv.Itoa(int(genericResource.DiscreteResourceSpec.Value)))
 			}
 		}
 		m["named_resources_spec"] = newStringSet(schema.HashString, named)
 		m["discrete_resources_spec"] = newStringSet(schema.HashString, discrete)
 		out = append(out, m)
 	}
+
 	return out
 }
 
@@ -456,6 +473,7 @@ func flattenTaskRestartPolicy(in *swarm.RestartPolicy) []any {
 		m["window"] = shortDur(*in.Window)
 	}
 	out[0] = m
+
 	return out
 }
 
@@ -476,6 +494,7 @@ func flattenTaskPlacement(in *swarm.Placement) []any {
 	}
 	m["max_replicas"] = in.MaxReplicas
 	out[0] = m
+
 	return out
 }
 
@@ -488,6 +507,7 @@ func flattenPlacementPrefs(in []swarm.PlacementPreference) *schema.Set {
 	for i, v := range in {
 		out[i] = v.Spread.SpreadDescriptor
 	}
+
 	return schema.NewSet(schema.HashString, out)
 }
 
@@ -502,6 +522,7 @@ func flattenPlacementPlatforms(in []swarm.Platform) *schema.Set {
 	taskSpecResource := resourceDockerService().Schema["task_spec"].Elem.(*schema.Resource)
 	placementResource := taskSpecResource.Schema["placement"].Elem.(*schema.Resource)
 	f := schema.HashResource(placementResource)
+
 	return schema.NewSet(f, out)
 }
 
@@ -510,7 +531,8 @@ func flattenTaskNetworksAdvanced(in []swarm.NetworkAttachmentConfig) *schema.Set
 	for i, v := range in {
 		m := make(map[string]any)
 		m["name"] = v.Target
-		m["driver_opts"] = stringSliceToSchemaSet(mapTypeMapValsToStringSlice(mapStringStringToMapStringInterface(v.DriverOpts)))
+		m["driver_opts"] = stringSliceToSchemaSet(mapTypeMapValsToStringSlice(
+			mapStringStringToMapStringInterface(v.DriverOpts)))
 		if len(v.Aliases) > 0 {
 			m["aliases"] = stringSliceToSchemaSet(v.Aliases)
 		}
@@ -519,6 +541,7 @@ func flattenTaskNetworksAdvanced(in []swarm.NetworkAttachmentConfig) *schema.Set
 	taskSpecResource := resourceDockerService().Schema["task_spec"].Elem.(*schema.Resource)
 	networksAdvancedResource := taskSpecResource.Schema["networks_advanced"].Elem.(*schema.Resource)
 	f := schema.HashResource(networksAdvancedResource)
+
 	return schema.NewSet(f, out)
 }
 
@@ -546,7 +569,7 @@ func flattenTaskLogDriver(in *swarm.Driver) []any {
 }
 
 // /// end TaskSpec
-// /// start EndpointSpec
+// /// start EndpointSpec.
 func flattenServicePorts(in []swarm.PortConfig) []any {
 	out := make([]any, len(in))
 	for i, v := range in {
@@ -614,7 +637,7 @@ func createServiceSpec(d *schema.ResourceData) (swarm.ServiceSpec, error) {
 	return serviceSpec, nil
 }
 
-// createServiceLabels creates the labels for the service
+// createServiceLabels creates the labels for the service.
 func createServiceLabels(d *schema.ResourceData) (map[string]string, error) {
 	if v, ok := d.GetOk("labels"); ok {
 		return labelSetToMap(v.(*schema.Set)), nil
@@ -623,7 +646,7 @@ func createServiceLabels(d *schema.ResourceData) (map[string]string, error) {
 }
 
 // == start taskSpec
-// createServiceTaskSpec creates the task template for the service
+// createServiceTaskSpec creates the task template for the service.
 func createServiceTaskSpec(d *schema.ResourceData) (swarm.TaskSpec, error) {
 	taskSpec := swarm.TaskSpec{}
 	if v, ok := d.GetOk("task_spec"); ok {
@@ -683,10 +706,11 @@ func createServiceTaskSpec(d *schema.ResourceData) (swarm.TaskSpec, error) {
 			}
 		}
 	}
+
 	return taskSpec, nil
 }
 
-// createContainerSpec creates the container spec
+// createContainerSpec creates the container spec.
 func createContainerSpec(v any) (*swarm.ContainerSpec, error) {
 	containerSpec := swarm.ContainerSpec{}
 	if len(v.([]any)) > 0 {
@@ -770,7 +794,7 @@ func createContainerSpec(v any) (*swarm.ContainerSpec, error) {
 				containerSpec.ReadOnly = value.(bool)
 			}
 			if value, ok := rawContainerSpec["mounts"]; ok {
-				mounts := []mount.Mount{}
+				var mounts []mount.Mount
 
 				for _, rawMount := range value.(*schema.Set).List() {
 					rawMount := rawMount.(map[string]any)
@@ -899,7 +923,7 @@ func createContainerSpec(v any) (*swarm.ContainerSpec, error) {
 				}
 			}
 			if value, ok := rawContainerSpec["secrets"]; ok {
-				secrets := []*swarm.SecretReference{}
+				var secrets []*swarm.SecretReference
 
 				for _, rawSecret := range value.(*schema.Set).List() {
 					rawSecret := rawSecret.(map[string]any)
@@ -921,7 +945,7 @@ func createContainerSpec(v any) (*swarm.ContainerSpec, error) {
 				containerSpec.Secrets = secrets
 			}
 			if value, ok := rawContainerSpec["configs"]; ok {
-				configs := []*swarm.ConfigReference{}
+				var configs []*swarm.ConfigReference
 
 				for _, rawConfig := range value.(*schema.Set).List() {
 					rawConfig := rawConfig.(map[string]any)
@@ -954,7 +978,7 @@ func createContainerSpec(v any) (*swarm.ContainerSpec, error) {
 	return &containerSpec, nil
 }
 
-// createResources creates the resource requirements for the service
+// createResources creates the resource requirements for the service.
 func createResources(v any) (*swarm.ResourceRequirements, error) {
 	resources := swarm.ResourceRequirements{}
 	if len(v.([]any)) > 0 {
@@ -995,10 +1019,11 @@ func createResources(v any) (*swarm.ResourceRequirements, error) {
 			}
 		}
 	}
+
 	return &resources, nil
 }
 
-// createGenericResources creates generic resources for a container
+// createGenericResources creates generic resources for a container.
 func createGenericResources(value any) ([]swarm.GenericResource, error) {
 	genericResources := make([]swarm.GenericResource, 0)
 	if len(value.([]any)) > 0 {
@@ -1031,10 +1056,11 @@ func createGenericResources(value any) ([]swarm.GenericResource, error) {
 			}
 		}
 	}
+
 	return genericResources, nil
 }
 
-// createRestartPolicy creates the restart poliyc of the service
+// createRestartPolicy creates the restart poliyc of the service.
 func createRestartPolicy(v any) (*swarm.RestartPolicy, error) {
 	restartPolicy := swarm.RestartPolicy{}
 	rawRestartPolicySingleItem := v.([]any)
@@ -1059,10 +1085,11 @@ func createRestartPolicy(v any) (*swarm.RestartPolicy, error) {
 		parsed, _ := time.ParseDuration(v.(string))
 		restartPolicy.Window = &parsed
 	}
+
 	return &restartPolicy, nil
 }
 
-// createPlacement creates the placement strategy for the service
+// createPlacement creates the placement strategy for the service.
 func createPlacement(v any) (*swarm.Placement, error) {
 	placement := swarm.Placement{}
 	if len(v.([]any)) > 0 {
@@ -1088,7 +1115,7 @@ func createPlacement(v any) (*swarm.Placement, error) {
 	return &placement, nil
 }
 
-// createServiceAdvancedNetworks creates the networks the service will be attachted to
+// createServiceAdvancedNetworks creates the networks the service will be attachted to.
 func createServiceAdvancedNetworks(v any) ([]swarm.NetworkAttachmentConfig, error) {
 	networks := []swarm.NetworkAttachmentConfig{}
 	if len(v.(*schema.Set).List()) > 0 {
@@ -1109,7 +1136,7 @@ func createServiceAdvancedNetworks(v any) ([]swarm.NetworkAttachmentConfig, erro
 	return networks, nil
 }
 
-// createLogDriver creates the log driver for the service
+// createLogDriver creates the log driver for the service.
 func createLogDriver(v any) (*swarm.Driver, error) {
 	logDriver := swarm.Driver{}
 	if len(v.([]any)) > 0 {
@@ -1121,16 +1148,18 @@ func createLogDriver(v any) (*swarm.Driver, error) {
 			if rawOptions, ok := rawLogging["options"]; ok {
 				logDriver.Options = mapTypeMapValsToString(rawOptions.(map[string]any))
 			}
-			// TODO SA4004: the surrounding loop is unconditionally terminated (staticcheck)
-			return &logDriver, nil //nolint:staticcheck
+
+			if logDriver.Name != "" || logDriver.Options != nil {
+				return &logDriver, nil
+			}
 		}
 	}
-	return nil, nil
+	return &logDriver, nil
 }
 
 // == end taskSpec
 
-// createServiceMode creates the mode the service will run in
+// createServiceMode creates the mode the service will run in.
 func createServiceMode(d *schema.ResourceData) (swarm.ServiceMode, error) {
 	serviceMode := swarm.ServiceMode{}
 	if v, ok := d.GetOk("mode"); ok {
@@ -1166,7 +1195,7 @@ func createServiceMode(d *schema.ResourceData) (swarm.ServiceMode, error) {
 	return serviceMode, nil
 }
 
-// createServiceUpdateConfig creates the service update config
+// createServiceUpdateConfig creates the service update config.
 func createServiceUpdateConfig(d *schema.ResourceData) (*swarm.UpdateConfig, error) {
 	if v, ok := d.GetOk("update_config"); ok {
 		return createUpdateOrRollbackConfig(v.([]any))
@@ -1174,7 +1203,7 @@ func createServiceUpdateConfig(d *schema.ResourceData) (*swarm.UpdateConfig, err
 	return nil, nil
 }
 
-// createServiceRollbackConfig create the service rollback config
+// createServiceRollbackConfig create the service rollback config.
 func createServiceRollbackConfig(d *schema.ResourceData) (*swarm.UpdateConfig, error) {
 	if v, ok := d.GetOk("rollback_config"); ok {
 		return createUpdateOrRollbackConfig(v.([]any))
@@ -1183,7 +1212,7 @@ func createServiceRollbackConfig(d *schema.ResourceData) (*swarm.UpdateConfig, e
 }
 
 // == start endpointSpec
-// createServiceEndpointSpec creates the spec for the endpoint
+// createServiceEndpointSpec creates the spec for the endpoint.
 func createServiceEndpointSpec(d *schema.ResourceData) (*swarm.EndpointSpec, error) {
 	endpointSpec := swarm.EndpointSpec{}
 	if v, ok := d.GetOk("endpoint_spec"); ok {
@@ -1205,7 +1234,7 @@ func createServiceEndpointSpec(d *schema.ResourceData) (*swarm.EndpointSpec, err
 	return &endpointSpec, nil
 }
 
-// portSetToServicePorts maps a set of ports to portConfig
+// portSetToServicePorts maps a set of ports to portConfig.
 func portSetToServicePorts(v any) []swarm.PortConfig {
 	retPortConfigs := []swarm.PortConfig{}
 	if len(v.([]any)) > 0 {
@@ -1237,7 +1266,7 @@ func portSetToServicePorts(v any) []swarm.PortConfig {
 
 // == end endpointSpec
 
-// createUpdateOrRollbackConfig create the configuration for and update or rollback
+// createUpdateOrRollbackConfig create the configuration for and update or rollback.
 func createUpdateOrRollbackConfig(config []any) (*swarm.UpdateConfig, error) {
 	updateConfig := swarm.UpdateConfig{}
 	if len(config) > 0 {
@@ -1266,7 +1295,7 @@ func createUpdateOrRollbackConfig(config []any) (*swarm.UpdateConfig, error) {
 	return &updateConfig, nil
 }
 
-// createConvergeConfig creates the configuration for converging
+// createConvergeConfig creates the configuration for converging.
 func createConvergeConfig(config []any) *convergeConfig {
 	plainConvergeConfig := &convergeConfig{}
 	if len(config) > 0 {
@@ -1281,10 +1310,11 @@ func createConvergeConfig(config []any) *convergeConfig {
 			}
 		}
 	}
+
 	return plainConvergeConfig
 }
 
-// HELPERS
+// HELPERS.
 func shortDur(d time.Duration) string {
 	s := d.String()
 	if strings.HasSuffix(s, "m0s") {
@@ -1293,6 +1323,7 @@ func shortDur(d time.Duration) string {
 	if strings.HasSuffix(s, "h0m") {
 		s = s[:len(s)-2]
 	}
+
 	return s
 }
 
@@ -1301,12 +1332,13 @@ func newStringSet(f schema.SchemaSetFunc, in []string) *schema.Set {
 	for i, v := range in {
 		out[i] = v
 	}
+
 	return schema.NewSet(f, out)
 }
 
 // mapStringSliceToMap maps a slice with '='  delimiter to as map: e.g.
 // - 'foo=bar' -> foo = "bar"
-// - 'foo=bar?p=baz' -> foo = "bar?p=baz"
+// - 'foo=bar?p=baz' -> foo = "bar?p=baz".
 func mapStringSliceToMap(in []string) map[string]string {
 	mapped := make(map[string]string, len(in))
 	for _, v := range in {
@@ -1317,10 +1349,11 @@ func mapStringSliceToMap(in []string) map[string]string {
 			mapped[key] = value
 		}
 	}
+
 	return mapped
 }
 
-// mapStringStringToMapStringInterface maps a string string map to a string interface map
+// mapStringStringToMapStringInterface maps a string string map to a string interface map.
 func mapStringStringToMapStringInterface(in map[string]string) map[string]any {
 	if len(in) == 0 {
 		return make(map[string]any)
@@ -1330,15 +1363,17 @@ func mapStringStringToMapStringInterface(in map[string]string) map[string]any {
 	for k, v := range in {
 		mapped[k] = v
 	}
+
 	return mapped
 }
 
-// stringSetToPlacementPrefs maps a string set to PlacementPreference
+// stringSetToPlacementPrefs maps a string set to PlacementPreference.
 func stringSetToPlacementPrefs(stringSet *schema.Set) []swarm.PlacementPreference {
-	ret := []swarm.PlacementPreference{}
+	var ret []swarm.PlacementPreference
 	if stringSet == nil {
 		return ret
 	}
+
 	for _, envVal := range stringSet.List() {
 		ret = append(ret, swarm.PlacementPreference{
 			Spread: &swarm.SpreadOver{
@@ -1346,12 +1381,13 @@ func stringSetToPlacementPrefs(stringSet *schema.Set) []swarm.PlacementPreferenc
 			},
 		})
 	}
+
 	return ret
 }
 
-// mapSetToPlacementPlatforms maps a string set to Platform
+// mapSetToPlacementPlatforms maps a string set to Platform.
 func mapSetToPlacementPlatforms(stringSet *schema.Set) []swarm.Platform {
-	ret := []swarm.Platform{}
+	var ret []swarm.Platform
 	if stringSet == nil {
 		return ret
 	}

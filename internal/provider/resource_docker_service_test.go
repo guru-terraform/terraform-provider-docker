@@ -2,14 +2,16 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/registry"
 	"os"
 	"regexp"
 	"strconv"
 	"testing"
 	"time"
+
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/registry"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -21,7 +23,7 @@ import (
 
 // ----------------------------------------
 // -----------    UNIT  TESTS   -----------
-// ----------------------------------------
+// ----------------------------------------.
 func TestMigrateServiceV1ToV2_empty_restart_policy_and_auth(t *testing.T) {
 	v1State := map[string]any{
 		"name": "volume-name",
@@ -50,7 +52,6 @@ func TestMigrateServiceV1ToV2_empty_restart_policy_and_auth(t *testing.T) {
 	v2Config := terraform.NewResourceConfigRaw(v2State)
 	diags = resourceDockerService().Validate(v2Config)
 	if diags.HasError() {
-		fmt.Println(diags)
 		t.Error("migrated service config is invalid")
 		return
 	}
@@ -89,7 +90,6 @@ func TestMigrateServiceV1ToV2_with_restart_policy(t *testing.T) {
 	v2Config := terraform.NewResourceConfigRaw(v2State)
 	diags = resourceDockerService().Validate(v2Config)
 	if diags.HasError() {
-		fmt.Println(diags)
 		t.Error("migrated service config is invalid")
 		return
 	}
@@ -128,7 +128,6 @@ func TestMigrateServiceV1ToV2_with_auth(t *testing.T) {
 	v2Config := terraform.NewResourceConfigRaw(v2State)
 	diags = resourceDockerService().Validate(v2Config)
 	if diags.HasError() {
-		fmt.Println(diags)
 		t.Error("migrated service config is invalid")
 		return
 	}
@@ -169,7 +168,6 @@ func TestMigrateServiceLabelState_empty_labels(t *testing.T) {
 	v1Config := terraform.NewResourceConfigRaw(v1State)
 	diags = resourceDockerService().Validate(v1Config)
 	if diags.HasError() {
-		fmt.Println(diags)
 		t.Error("migrated service config is invalid")
 		return
 	}
@@ -222,7 +220,6 @@ func TestMigrateServiceLabelState_with_labels(t *testing.T) {
 	v1Config := terraform.NewResourceConfigRaw(v1State)
 	diags = resourceDockerService().Validate(v1Config)
 	if diags.HasError() {
-		fmt.Println(diags)
 		t.Error("migrated service config is invalid")
 		return
 	}
@@ -293,7 +290,7 @@ func checkAttribute(t *testing.T, name, actual, expected string) {
 // ----------------------------------------
 // ----------- ACCEPTANCE TESTS -----------
 // ----------------------------------------
-// Fire and Forget
+// Fire and Forget.
 var serviceIDRegex = regexp.MustCompile(`[A-Za-z0-9_\+\.-]+`)
 
 func TestAccDockerService_minimalSpec(t *testing.T) {
@@ -307,7 +304,8 @@ func TestAccDockerService_minimalSpec(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 				),
 			},
 			{
@@ -336,44 +334,51 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 
 		if len(s.Spec.TaskTemplate.ContainerSpec.Command) != 1 ||
 			s.Spec.TaskTemplate.ContainerSpec.Command[0] != "ls" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Command is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.Command)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Command is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.Command)
 		}
 
 		if len(s.Spec.TaskTemplate.ContainerSpec.Args) != 1 ||
 			s.Spec.TaskTemplate.ContainerSpec.Args[0] != "-las" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Args is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.Args)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Args is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.Args)
 		}
 
-		if s.Spec.TaskTemplate.ContainerSpec.Hostname == "" ||
-			s.Spec.TaskTemplate.ContainerSpec.Hostname != "my-fancy-service" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Hostname is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.Hostname)
+		if s.Spec.TaskTemplate.ContainerSpec.Hostname != "my-fancy-service" {
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Hostname is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.Hostname)
 		}
 
 		// because the order is not deterministic
 		if len(s.Spec.TaskTemplate.ContainerSpec.Env) != 2 ||
-			(s.Spec.TaskTemplate.ContainerSpec.Env[0] != "URI=/api-call?param1=value1" && s.Spec.TaskTemplate.ContainerSpec.Env[0] != "MYFOO=BAR") ||
-			(s.Spec.TaskTemplate.ContainerSpec.Env[1] != "URI=/api-call?param1=value1" && s.Spec.TaskTemplate.ContainerSpec.Env[1] != "MYFOO=BAR") {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Env is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.Env)
+			(s.Spec.TaskTemplate.ContainerSpec.Env[0] != "URI=/api-call?param1=value1" &&
+				s.Spec.TaskTemplate.ContainerSpec.Env[0] != "MYFOO=BAR") ||
+			(s.Spec.TaskTemplate.ContainerSpec.Env[1] != "URI=/api-call?param1=value1" &&
+				s.Spec.TaskTemplate.ContainerSpec.Env[1] != "MYFOO=BAR") {
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Env is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.Env)
 		}
 
-		if s.Spec.TaskTemplate.ContainerSpec.Dir == "" ||
-			s.Spec.TaskTemplate.ContainerSpec.Dir != "/root" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Dir is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.Dir)
+		if s.Spec.TaskTemplate.ContainerSpec.Dir != "/root" {
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Dir is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.Dir)
 		}
 
-		if s.Spec.TaskTemplate.ContainerSpec.User == "" ||
-			s.Spec.TaskTemplate.ContainerSpec.User != "root" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.User is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.User)
+		if s.Spec.TaskTemplate.ContainerSpec.User != "root" {
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.User is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.User)
 		}
 
 		if len(s.Spec.TaskTemplate.ContainerSpec.Groups) != 2 ||
 			s.Spec.TaskTemplate.ContainerSpec.Groups[0] != "docker" ||
 			s.Spec.TaskTemplate.ContainerSpec.Groups[1] != "foogroup" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Groups is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.Groups)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Groups is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.Groups)
 		}
 
 		if s.Spec.TaskTemplate.ContainerSpec.Privileges.CredentialSpec != nil {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Privileges.CredentialSpec is wrong: %v", s.Spec.TaskTemplate.ContainerSpec.Privileges.CredentialSpec)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Privileges.CredentialSpec is wrong: %v",
+				s.Spec.TaskTemplate.ContainerSpec.Privileges.CredentialSpec)
 		}
 
 		if s.Spec.TaskTemplate.ContainerSpec.Privileges.SELinuxContext == nil ||
@@ -382,16 +387,18 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			s.Spec.TaskTemplate.ContainerSpec.Privileges.SELinuxContext.Role != "role-label" ||
 			s.Spec.TaskTemplate.ContainerSpec.Privileges.SELinuxContext.Type != "type-label" ||
 			s.Spec.TaskTemplate.ContainerSpec.Privileges.SELinuxContext.Level != "level-label" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Privileges.SELinuxContext is wrong: %v", s.Spec.TaskTemplate.ContainerSpec.Privileges.SELinuxContext)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Privileges.SELinuxContext is wrong: %v",
+				s.Spec.TaskTemplate.ContainerSpec.Privileges.SELinuxContext)
 		}
 
-		if s.Spec.TaskTemplate.ContainerSpec.StopSignal == "" ||
-			s.Spec.TaskTemplate.ContainerSpec.StopSignal != "SIGTERM" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.StopSignal is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.StopSignal)
+		if s.Spec.TaskTemplate.ContainerSpec.StopSignal != "SIGTERM" {
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.StopSignal is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.StopSignal)
 		}
 
 		if s.Spec.TaskTemplate.ContainerSpec.ReadOnly != true {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.ReadOnly is wrong: %v", s.Spec.TaskTemplate.ContainerSpec.ReadOnly)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.ReadOnly is wrong: %v",
+				s.Spec.TaskTemplate.ContainerSpec.ReadOnly)
 		}
 
 		if len(s.Spec.TaskTemplate.ContainerSpec.Mounts) != 2 ||
@@ -411,11 +418,13 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			!mapEquals("foo", "bar", s.Spec.TaskTemplate.ContainerSpec.Mounts[1].VolumeOptions.Labels) ||
 			s.Spec.TaskTemplate.ContainerSpec.Mounts[1].VolumeOptions.DriverConfig.Name != "random-driver" ||
 			!mapEquals("op1", "val1", s.Spec.TaskTemplate.ContainerSpec.Mounts[1].VolumeOptions.DriverConfig.Options) {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Mounts is wrong: %#v", s.Spec.TaskTemplate.ContainerSpec.Mounts)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Mounts is wrong: %#v",
+				s.Spec.TaskTemplate.ContainerSpec.Mounts)
 		}
 
 		if *s.Spec.TaskTemplate.ContainerSpec.StopGracePeriod != 10*time.Second {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.StopGracePeriod is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.StopGracePeriod)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.StopGracePeriod is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.StopGracePeriod)
 		}
 
 		if s.Spec.TaskTemplate.ContainerSpec.Healthcheck == nil ||
@@ -427,12 +436,14 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			s.Spec.TaskTemplate.ContainerSpec.Healthcheck.Interval != 5*time.Second ||
 			s.Spec.TaskTemplate.ContainerSpec.Healthcheck.Timeout != 2*time.Second ||
 			time.Duration(s.Spec.TaskTemplate.ContainerSpec.Healthcheck.Retries) != 4 {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Healthcheck is wrong: %v", s.Spec.TaskTemplate.ContainerSpec.Healthcheck)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Healthcheck is wrong: %v",
+				s.Spec.TaskTemplate.ContainerSpec.Healthcheck)
 		}
 
 		if len(s.Spec.TaskTemplate.ContainerSpec.Hosts) != 1 ||
 			s.Spec.TaskTemplate.ContainerSpec.Hosts[0] != "10.0.1.0 testhost" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Hosts is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.Hosts)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Hosts is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.Hosts)
 		}
 
 		if s.Spec.TaskTemplate.ContainerSpec.DNSConfig == nil ||
@@ -442,7 +453,8 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			s.Spec.TaskTemplate.ContainerSpec.DNSConfig.Search[0] != "example.org" ||
 			len(s.Spec.TaskTemplate.ContainerSpec.DNSConfig.Options) != 1 ||
 			s.Spec.TaskTemplate.ContainerSpec.DNSConfig.Options[0] != "timeout:3" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.DNSConfig is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.DNSConfig)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.DNSConfig is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.DNSConfig)
 		}
 
 		if len(s.Spec.TaskTemplate.ContainerSpec.Secrets) != 1 ||
@@ -450,9 +462,9 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			s.Spec.TaskTemplate.ContainerSpec.Secrets[0].File.Name != "/secrets.json" ||
 			s.Spec.TaskTemplate.ContainerSpec.Secrets[0].File.UID != "0" ||
 			s.Spec.TaskTemplate.ContainerSpec.Secrets[0].File.GID != "0" ||
-			// nolint: staticcheck
-			s.Spec.TaskTemplate.ContainerSpec.Secrets[0].File.Mode != os.FileMode(777) {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Secrets is wrong: %v", s.Spec.TaskTemplate.ContainerSpec.Secrets)
+			s.Spec.TaskTemplate.ContainerSpec.Secrets[0].File.Mode != os.FileMode(0777) {
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Secrets is wrong: %v",
+				s.Spec.TaskTemplate.ContainerSpec.Secrets)
 		}
 
 		if len(s.Spec.TaskTemplate.ContainerSpec.Configs) != 1 ||
@@ -461,19 +473,21 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			s.Spec.TaskTemplate.ContainerSpec.Configs[0].File.UID != "0" ||
 			s.Spec.TaskTemplate.ContainerSpec.Configs[0].File.GID != "0" ||
 			s.Spec.TaskTemplate.ContainerSpec.Configs[0].File.Mode != os.FileMode(292) {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Configs is wrong: %v", s.Spec.TaskTemplate.ContainerSpec.Configs)
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Configs is wrong: %v",
+				s.Spec.TaskTemplate.ContainerSpec.Configs)
 		}
 
-		if s.Spec.TaskTemplate.ContainerSpec.Isolation == "" ||
-			s.Spec.TaskTemplate.ContainerSpec.Isolation != "default" {
-			return fmt.Errorf("Service Spec.TaskTemplate.ContainerSpec.Isolation is wrong: %s", s.Spec.TaskTemplate.ContainerSpec.Isolation)
+		if s.Spec.TaskTemplate.ContainerSpec.Isolation != "default" {
+			return fmt.Errorf("service Spec.TaskTemplate.ContainerSpec.Isolation is wrong: %s",
+				s.Spec.TaskTemplate.ContainerSpec.Isolation)
 		}
 
 		if s.Spec.TaskTemplate.Resources == nil ||
 			s.Spec.TaskTemplate.Resources.Limits == nil ||
 			s.Spec.TaskTemplate.Resources.Limits.NanoCPUs != 1000000 ||
 			s.Spec.TaskTemplate.Resources.Limits.MemoryBytes != 536870912 {
-			return fmt.Errorf("Service Spec.TaskTemplate.Resources is wrong: %v", s.Spec.TaskTemplate.Resources)
+			return fmt.Errorf("service Spec.TaskTemplate.Resources is wrong: %v",
+				s.Spec.TaskTemplate.Resources)
 		}
 
 		if s.Spec.TaskTemplate.RestartPolicy == nil ||
@@ -481,7 +495,8 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			*s.Spec.TaskTemplate.RestartPolicy.Delay != 3*time.Second ||
 			*s.Spec.TaskTemplate.RestartPolicy.MaxAttempts != 4 ||
 			*s.Spec.TaskTemplate.RestartPolicy.Window != 10*time.Second {
-			return fmt.Errorf("Service Spec.TaskTemplate.RestartPolicy is wrong: %v", s.Spec.TaskTemplate.RestartPolicy)
+			return fmt.Errorf("service Spec.TaskTemplate.RestartPolicy is wrong: %v",
+				s.Spec.TaskTemplate.RestartPolicy)
 		}
 
 		if s.Spec.TaskTemplate.Placement == nil ||
@@ -490,16 +505,18 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			len(s.Spec.TaskTemplate.Placement.Preferences) != 1 ||
 			s.Spec.TaskTemplate.Placement.Preferences[0].Spread == nil ||
 			s.Spec.TaskTemplate.Placement.Preferences[0].Spread.SpreadDescriptor != "spread=node.role.manager" ||
-			// s.Spec.TaskTemplate.Placement.MaxReplicas == uint64(2) || NOTE: mavogel: it's 0x2 in the log but does not work here either
+			// s.Spec.TaskTemplate.Placement.MaxReplicas == uint64(2) ||
+			//NOTE: mavogel: it's 0x2 in the log but does not work here either
 			len(s.Spec.TaskTemplate.Placement.Platforms) != 1 ||
 			s.Spec.TaskTemplate.Placement.Platforms[0].Architecture != "amd64" ||
 			s.Spec.TaskTemplate.Placement.Platforms[0].OS != "linux" {
-			return fmt.Errorf("Service Spec.TaskTemplate.Placement is wrong: %#v", s.Spec.TaskTemplate.Placement)
+			return fmt.Errorf("service Spec.TaskTemplate.Placement is wrong: %#v",
+				s.Spec.TaskTemplate.Placement)
 		}
 
-		if s.Spec.TaskTemplate.Runtime == "" ||
-			s.Spec.TaskTemplate.Runtime != "container" {
-			return fmt.Errorf("Service Spec.TaskTemplate.Runtime is wrong: %s", s.Spec.TaskTemplate.Runtime)
+		if s.Spec.TaskTemplate.Runtime != "container" {
+			return fmt.Errorf("service Spec.TaskTemplate.Runtime is wrong: %s",
+				s.Spec.TaskTemplate.Runtime)
 		}
 
 		if len(s.Spec.TaskTemplate.Networks) != 1 ||
@@ -508,23 +525,27 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			s.Spec.TaskTemplate.Networks[0].Aliases[0] != "tftest-foobar" ||
 			s.Spec.TaskTemplate.Networks[0].DriverOpts == nil ||
 			!mapEquals("foo", "bar", s.Spec.TaskTemplate.Networks[0].DriverOpts) {
-			return fmt.Errorf("Service Spec.TaskTemplate.Networks is wrong: %s", s.Spec.TaskTemplate.Networks)
+			return fmt.Errorf("service Spec.TaskTemplate.Networks is wrong: %s",
+				s.Spec.TaskTemplate.Networks)
 		}
 
 		if s.Spec.TaskTemplate.LogDriver == nil ||
 			s.Spec.TaskTemplate.LogDriver.Name != "json-file" ||
 			!mapEquals("max-file", "3", s.Spec.TaskTemplate.LogDriver.Options) ||
 			!mapEquals("max-size", "10m", s.Spec.TaskTemplate.LogDriver.Options) {
-			return fmt.Errorf("Service Spec.TaskTemplate.LogDriver is wrong: %s", s.Spec.TaskTemplate.LogDriver)
+			return fmt.Errorf("service Spec.TaskTemplate.LogDriver is wrong: %s",
+				s.Spec.TaskTemplate.LogDriver)
 		}
 
 		if s.Spec.TaskTemplate.ForceUpdate != 0 {
-			return fmt.Errorf("Service Spec.TaskTemplate.ForceUpdate is wrong: %v", s.Spec.TaskTemplate.ForceUpdate)
+			return fmt.Errorf("service Spec.TaskTemplate.ForceUpdate is wrong: %v",
+				s.Spec.TaskTemplate.ForceUpdate)
 		}
 
 		if s.Spec.Mode.Replicated == nil ||
 			*s.Spec.Mode.Replicated.Replicas != uint64(2) {
-			return fmt.Errorf("Service s.Spec.Mode.Replicated is wrong: %#v", s.Spec.Mode.Replicated)
+			return fmt.Errorf("service s.Spec.Mode.Replicated is wrong: %#v",
+				s.Spec.Mode.Replicated)
 		}
 
 		if s.Spec.UpdateConfig == nil ||
@@ -534,7 +555,8 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			s.Spec.UpdateConfig.Monitor != 5*time.Second ||
 			s.Spec.UpdateConfig.MaxFailureRatio != 0.1 ||
 			s.Spec.UpdateConfig.Order != "start-first" {
-			return fmt.Errorf("Service s.Spec.UpdateConfig is wrong: %#v", s.Spec.UpdateConfig)
+			return fmt.Errorf("service s.Spec.UpdateConfig is wrong: %#v",
+				s.Spec.UpdateConfig)
 		}
 
 		if s.Spec.RollbackConfig == nil ||
@@ -544,7 +566,8 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			s.Spec.RollbackConfig.Monitor != 10*time.Hour ||
 			s.Spec.RollbackConfig.MaxFailureRatio != 0.9 ||
 			s.Spec.RollbackConfig.Order != "stop-first" {
-			return fmt.Errorf("Service s.Spec.RollbackConfig is wrong: %#v", s.Spec.RollbackConfig)
+			return fmt.Errorf("service s.Spec.RollbackConfig is wrong: %#v",
+				s.Spec.RollbackConfig)
 		}
 
 		if s.Spec.EndpointSpec == nil ||
@@ -555,7 +578,8 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			s.Spec.EndpointSpec.Ports[0].TargetPort != uint32(8080) ||
 			s.Spec.EndpointSpec.Ports[0].PublishedPort != uint32(8080) ||
 			s.Spec.EndpointSpec.Ports[0].PublishMode != swarm.PortConfigPublishModeIngress {
-			return fmt.Errorf("Service s.Spec.EndpointSpec is wrong: %#v", s.Spec.EndpointSpec)
+			return fmt.Errorf("service s.Spec.EndpointSpec is wrong: %#v",
+				s.Spec.EndpointSpec)
 		}
 
 		if s.Endpoint.Spec.Mode != swarm.ResolutionModeVIP ||
@@ -572,7 +596,8 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 			s.Endpoint.Ports[0].PublishedPort != uint32(8080) ||
 			s.Endpoint.Ports[0].PublishMode != swarm.PortConfigPublishModeIngress ||
 			len(s.Endpoint.VirtualIPs) != 2 {
-			return fmt.Errorf("Service s.Endpoint is wrong: %#v", s.Endpoint)
+			return fmt.Errorf("service s.Endpoint is wrong: %#v",
+				s.Endpoint)
 		}
 
 		return nil
@@ -589,50 +614,70 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
 					testCheckLabelMap("docker_service.foo", "labels", map[string]string{"servicelabel": "true"}),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					testCheckLabelMap("docker_service.foo", "task_spec.0.container_spec.0.labels", map[string]string{"foo": "bar"}),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.command.0", "ls"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.args.0", "-las"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hostname", "my-fancy-service"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.env.MYFOO", "BAR"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.env.URI", "/api-call?param1=value1"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.env.URI",
+						"/api-call?param1=value1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.dir", "/root"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.user", "root"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.groups.0", "docker"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.groups.1", "foogroup"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.disable", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.user", "user-label"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.role", "role-label"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.type", "type-label"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.privileges.0.se_linux_context.0.level", "level-label"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.privileges.0.se_linux_context.0.disable", "true"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.privileges.0.se_linux_context.0.user", "user-label"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.privileges.0.se_linux_context.0.role", "role-label"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.privileges.0.se_linux_context.0.type", "type-label"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.privileges.0.se_linux_context.0.level", "level-label"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.read_only", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.0.target", "/mount/test2"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.0.source", "tftest-volume-2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.0.target",
+						"/mount/test2"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.0.source",
+						"tftest-volume-2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.0.type", "bind"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.0.read_only", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.0.bind_options.0.propagation", "rprivate"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1.target", "/mount/test"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1.source", "tftest-volume"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.mounts.0.bind_options.0.propagation", "rprivate"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.mounts.1.target", "/mount/test"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.mounts.1.source", "tftest-volume"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1.type", "volume"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1.read_only", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1.volume_options.0.no_copy", "true"),
-					testCheckLabelMap("docker_service.foo", "task_spec.0.container_spec.0.mounts.1.volume_options.0.labels", map[string]string{"foo": "bar"}),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1.volume_options.0.driver_name", "random-driver"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.mounts.1.volume_options.0.driver_options.op1", "val1"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.mounts.1.volume_options.0.no_copy", "true"),
+					testCheckLabelMap("docker_service.foo",
+						"task_spec.0.container_spec.0.mounts.1.volume_options.0.labels", map[string]string{"foo": "bar"}),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.mounts.1.volume_options.0.driver_name", "random-driver"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.mounts.1.volume_options.0.driver_options.op1", "val1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.stop_signal", "SIGTERM"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.stop_grace_period", "10s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.interval", "5s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.timeout", "2s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.retries", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hosts.0.host", "testhost"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hosts.0.ip", "10.0.1.0"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.dns_config.0.nameservers.0", "8.8.8.8"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.dns_config.0.search.0", "example.org"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.dns_config.0.options.0", "timeout:3"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.dns_config.0.nameservers.0", "8.8.8.8"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.dns_config.0.search.0", "example.org"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.dns_config.0.options.0", "timeout:3"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.configs.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.secrets.#", "1"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.resources.0.limits.0.nano_cpus", "1000000"),
@@ -641,8 +686,10 @@ func TestAccDockerService_fullSpec(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.restart_policy.0.delay", "3s"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.restart_policy.0.max_attempts", "4"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.restart_policy.0.window", "10s"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.placement.0.constraints.0", "node.role==manager"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.placement.0.prefs.0", "spread=node.role.manager"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.placement.0.constraints.0", "node.role==manager"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.placement.0.prefs.0", "spread=node.role.manager"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.placement.0.max_replicas", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.force_update", "0"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.networks_advanced.#", "1"),
@@ -696,7 +743,8 @@ func TestAccDockerService_partialReplicationConfig(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "1"),
 				),
 			},
@@ -705,7 +753,8 @@ func TestAccDockerService_partialReplicationConfig(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "1"),
 				),
 			},
@@ -714,7 +763,8 @@ func TestAccDockerService_partialReplicationConfig(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 				),
 			},
@@ -741,7 +791,8 @@ func TestAccDockerService_globalReplicationMode(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.global", "true"),
 				),
 			},
@@ -764,7 +815,8 @@ func TestAccDockerService_ConflictingGlobalAndReplicated(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      loadTestConfiguration(t, RESOURCE, "docker_service", "testAccDockerServiceConflictingGlobalAndReplicated"),
+				Config: loadTestConfiguration(t, RESOURCE, "docker_service",
+					"testAccDockerServiceConflictingGlobalAndReplicated"),
 				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
 			},
 		},
@@ -781,7 +833,8 @@ func TestAccDockerService_ConflictingGlobalModeAndConverge(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      loadTestConfiguration(t, RESOURCE, "docker_service", "testAccDockerServiceConflictingGlobalModeAndConverge"),
+				Config: loadTestConfiguration(t, RESOURCE, "docker_service",
+					"testAccDockerServiceConflictingGlobalModeAndConverge"),
 				ExpectError: regexp.MustCompile(`.*conflicts with.*`),
 			},
 		},
@@ -791,10 +844,10 @@ func TestAccDockerService_ConflictingGlobalModeAndConverge(t *testing.T) {
 	})
 }
 
-// Converging tests
+// Converging tests.
 func TestAccDockerService_privateImageConverge(t *testing.T) {
-	registry := "127.0.0.1:15000"
-	image := "127.0.0.1:15000/tftest-service:v1"
+	reg := "127.0.0.1:15000"
+	img := "127.0.0.1:15000/tftest-service:v1"
 	ctx := context.Background()
 
 	resource.Test(t, resource.TestCase{
@@ -802,11 +855,13 @@ func TestAccDockerService_privateImageConverge(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_service", "testAccDockerServicePrivateImageConverge"), registry, image),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_service",
+					"testAccDockerServicePrivateImageConverge"), reg, img),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-foo"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 				),
 			},
 		},
@@ -822,7 +877,8 @@ func TestAccDockerService_nonExistingPrivateImageConverge(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      loadTestConfiguration(t, RESOURCE, "docker_service", "testAccDockerServiceNonExistingPrivateImageConverge"),
+				Config: loadTestConfiguration(t, RESOURCE, "docker_service",
+					"testAccDockerServiceNonExistingPrivateImageConverge"),
 				ExpectError: regexp.MustCompile(`.*did not converge after.*`),
 				Check: resource.ComposeTestCheckFunc(
 					isServiceRemoved("tftest-service-privateimagedoesnotexist"),
@@ -838,7 +894,8 @@ func TestAccDockerService_nonExistingPublicImageConverge(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      loadTestConfiguration(t, RESOURCE, "docker_service", "testAccDockerServicenonExistingPublicImageConverge"),
+				Config: loadTestConfiguration(t, RESOURCE, "docker_service",
+					"testAccDockerServicenonExistingPublicImageConverge"),
 				ExpectError: regexp.MustCompile(`.*did not converge after.*`),
 				Check: resource.ComposeTestCheckFunc(
 					isServiceRemoved("tftest-service-publicimagedoesnotexist"),
@@ -859,7 +916,8 @@ func TestAccDockerService_convergeAndStopGracefully(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-basic-converge"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 					testValueHigherEqualThan("docker_service.foo", "endpoint_spec.0.ports.0.target_port", 8080),
 					testValueHigherEqualThan("docker_service.foo", "endpoint_spec.0.ports.0.published_port", 30000),
@@ -873,8 +931,8 @@ func TestAccDockerService_convergeAndStopGracefully(t *testing.T) {
 }
 
 func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
-	image := "127.0.0.1:15000/tftest-service:v1"
-	imageFail := "127.0.0.1:15000/tftest-service:v3"
+	img := "127.0.0.1:15000/tftest-service:v1"
+	imgFail := "127.0.0.1:15000/tftest-service:v3"
 	ctx := context.Background()
 
 	resource.Test(t, resource.TestCase{
@@ -882,21 +940,25 @@ func TestAccDockerService_updateFailsAndRollbackConverge(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_service", "updateFailsAndRollbackConvergeConfig"), image),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_service", "updateFailsAndRollbackConvergeConfig"),
+					img),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-updateFailsAndRollbackConverge"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 				),
 			},
 			{
-				Config:      fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_service", "updateFailsAndRollbackConvergeConfig"), imageFail),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_service", "updateFailsAndRollbackConvergeConfig"),
+					imgFail),
 				ExpectError: regexp.MustCompile(`.*rollback completed.*`),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-service-updateFailsAndRollbackConverge"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", "2"),
 				),
 			},
@@ -911,7 +973,7 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 	// Step 1
 	configData := "ewogICJwcmVmaXgiOiAiMTIzIgp9"
 	secretData := "ewogICJrZXkiOiAiUVdFUlRZIgp9"
-	image := "127.0.0.1:15000/tftest-service:v1"
+	img := "127.0.0.1:15000/tftest-service:v1"
 	ctx := context.Background()
 	mounts := `
 	mounts {
@@ -1039,18 +1101,20 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 			// Note mavogel: we download all images upfront and use a data_source then
 			// becausee the test is only flaky in CI. See
 			// https://github.com/guru-terraform/terraform-provider-docker/runs/2732063570
-			pullImageForTest(t, image)
+			pullImageForTest(t, img)
 			pullImageForTest(t, image2)
 			pullImageForTest(t, image3)
 		},
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData, secretData, image, mounts, hosts, healthcheckInterval, healthcheckTimeout, logging, replicas, portsSpec),
+				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData, secretData, img, mounts, hosts,
+					healthcheckInterval, healthcheckTimeout, logging, replicas, portsSpec),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", strconv.Itoa(replicas)),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "3s"),
@@ -1070,9 +1134,12 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.interval", healthcheckInterval),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.timeout", healthcheckTimeout),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.3",
+						"localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.interval",
+						healthcheckInterval),
+					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.timeout",
+						healthcheckTimeout),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.retries", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hostname", ""),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hosts.#", "1"),
@@ -1092,11 +1159,13 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 				),
 			},
 			{
-				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData2, secretData2, image2, mounts2, hosts2, healthcheckInterval2, healthcheckTimeout2, logging2, replicas2, portsSpec2),
+				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData2, secretData2, image2, mounts2,
+					hosts2, healthcheckInterval2, healthcheckTimeout2, logging2, replicas2, portsSpec2),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", strconv.Itoa(replicas2)),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "3s"),
@@ -1118,9 +1187,12 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.interval", healthcheckInterval2),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.timeout", healthcheckTimeout2),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.healthcheck.0.interval", healthcheckInterval2),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.healthcheck.0.timeout", healthcheckTimeout2),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.retries", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hostname", ""),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hosts.#", "1"),
@@ -1140,11 +1212,13 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 				),
 			},
 			{
-				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData3, secretData3, image3, mounts3, hosts3, healthcheckInterval3, healthcheckTimeout3, logging3, replicas3, portsSpec3),
+				Config: fmt.Sprintf(updateMultiplePropertiesConfigConverge, configData3, secretData3, image3, mounts3,
+					hosts3, healthcheckInterval3, healthcheckTimeout3, logging3, replicas3, portsSpec3),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo", "name", "tftest-fnf-service-up-crihiadr"),
-					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestMatchResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.image",
+						regexp.MustCompile(`sha256.*`)),
 					resource.TestCheckResourceAttr("docker_service.foo", "mode.0.replicated.0.replicas", strconv.Itoa(replicas3)),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.parallelism", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "update_config.0.delay", "3s"),
@@ -1166,9 +1240,12 @@ func TestAccDockerService_updateMultiplePropertiesConverge(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.0", "CMD"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.1", "curl"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.2", "-f"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.interval", healthcheckInterval3),
-					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.timeout", healthcheckTimeout3),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.healthcheck.0.test.3", "localhost:8080/health"),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.healthcheck.0.interval", healthcheckInterval3),
+					resource.TestCheckResourceAttr("docker_service.foo",
+						"task_spec.0.container_spec.0.healthcheck.0.timeout", healthcheckTimeout3),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.healthcheck.0.retries", "2"),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hostname", ""),
 					resource.TestCheckResourceAttr("docker_service.foo", "task_spec.0.container_spec.0.hosts.#", "1"),
@@ -1319,20 +1396,31 @@ func TestAccDockerService_mounts_issue222(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_service.foo_empty", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo_empty", "name", "tftest-service-mount-bind-empty"),
-					resource.TestMatchResourceAttr("docker_service.foo_empty", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
-					resource.TestCheckResourceAttr("docker_service.foo_empty", "task_spec.0.container_spec.0.mounts.0.target", "/mount/test"),
-					resource.TestCheckResourceAttr("docker_service.foo_empty", "task_spec.0.container_spec.0.mounts.0.source", "tftest-volume"),
+					resource.TestMatchResourceAttr("docker_service.foo_empty",
+						"task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestCheckResourceAttr("docker_service.foo_empty",
+						"task_spec.0.container_spec.0.mounts.0.target", "/mount/test"),
+					resource.TestCheckResourceAttr("docker_service.foo_empty",
+						"task_spec.0.container_spec.0.mounts.0.source", "tftest-volume"),
 					resource.TestCheckResourceAttr("docker_service.foo_empty", "task_spec.0.container_spec.0.mounts.0.type", "bind"),
-					resource.TestCheckResourceAttr("docker_service.foo_empty", "task_spec.0.container_spec.0.mounts.0.read_only", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo_empty", "task_spec.0.container_spec.0.mounts.0.bind_options.0.propagation", "rprivate"),
+					resource.TestCheckResourceAttr("docker_service.foo_empty",
+						"task_spec.0.container_spec.0.mounts.0.read_only", "true"),
+					resource.TestCheckResourceAttr("docker_service.foo_empty",
+						"task_spec.0.container_spec.0.mounts.0.bind_options.0.propagation", "rprivate"),
 					resource.TestMatchResourceAttr("docker_service.foo_null", "id", serviceIDRegex),
 					resource.TestCheckResourceAttr("docker_service.foo_null", "name", "tftest-service-mount-bind-null"),
-					resource.TestMatchResourceAttr("docker_service.foo_null", "task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
-					resource.TestCheckResourceAttr("docker_service.foo_null", "task_spec.0.container_spec.0.mounts.0.target", "/mount/test"),
-					resource.TestCheckResourceAttr("docker_service.foo_null", "task_spec.0.container_spec.0.mounts.0.source", "tftest-volume"),
-					resource.TestCheckResourceAttr("docker_service.foo_null", "task_spec.0.container_spec.0.mounts.0.type", "bind"),
-					resource.TestCheckResourceAttr("docker_service.foo_null", "task_spec.0.container_spec.0.mounts.0.read_only", "true"),
-					resource.TestCheckResourceAttr("docker_service.foo_null", "task_spec.0.container_spec.0.mounts.0.bind_options.0.propagation", "rprivate"),
+					resource.TestMatchResourceAttr("docker_service.foo_null",
+						"task_spec.0.container_spec.0.image", regexp.MustCompile(`sha256.*`)),
+					resource.TestCheckResourceAttr("docker_service.foo_null",
+						"task_spec.0.container_spec.0.mounts.0.target", "/mount/test"),
+					resource.TestCheckResourceAttr("docker_service.foo_null",
+						"task_spec.0.container_spec.0.mounts.0.source", "tftest-volume"),
+					resource.TestCheckResourceAttr("docker_service.foo_null",
+						"task_spec.0.container_spec.0.mounts.0.type", "bind"),
+					resource.TestCheckResourceAttr("docker_service.foo_null",
+						"task_spec.0.container_spec.0.mounts.0.read_only", "true"),
+					resource.TestCheckResourceAttr("docker_service.foo_null",
+						"task_spec.0.container_spec.0.mounts.0.bind_options.0.propagation", "rprivate"),
 				),
 			},
 			{
@@ -1353,22 +1441,22 @@ func TestAccDockerService_mounts_issue222(t *testing.T) {
 }
 
 // Helpers
-// isServiceRemoved checks if a service was removed successfully
+// isServiceRemoved checks if a service was removed successfully.
 func isServiceRemoved(serviceName string) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
+	return func(_ *terraform.State) error {
 		ctx := context.Background()
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
-		filters := filters.NewArgs()
-		filters.Add("name", serviceName)
+		filts := filters.NewArgs()
+		filts.Add("name", serviceName)
 		services, err := client.ServiceList(ctx, types.ServiceListOptions{
-			Filters: filters,
+			Filters: filts,
 		})
 		if err != nil {
-			return fmt.Errorf("Error listing service for name %s: %v", serviceName, err)
+			return fmt.Errorf("error listing service for name %s: %w", serviceName, err)
 		}
 		length := len(services)
 		if length != 0 {
-			return fmt.Errorf("Service should be removed but is running: %s", serviceName)
+			return fmt.Errorf("service should be removed but is running: %s", serviceName)
 		}
 
 		return nil
@@ -1377,18 +1465,18 @@ func isServiceRemoved(serviceName string) resource.TestCheckFunc {
 
 // checkAndRemoveImages checks and removes all private images with
 // the given pattern. This ensures that the image are not kept on the swarm nodes
-// and the tests are independent of each other
-func checkAndRemoveImages(ctx context.Context, s *terraform.State) error {
+// and the tests are independent of each other.
+func checkAndRemoveImages(ctx context.Context, _ *terraform.State) error {
 	retrySleepSeconds := 3
 	maxRetryDeleteCount := 6
 	imagePattern := "127.0.0.1:15000/tftest-service*"
 
 	client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 
-	filters := filters.NewArgs()
-	filters.Add("reference", imagePattern)
+	filts := filters.NewArgs()
+	filts.Add("reference", imagePattern)
 	images, err := client.ImageList(ctx, image.ListOptions{
-		Filters: filters,
+		Filters: filts,
 	})
 	if err != nil {
 		return err
@@ -1397,7 +1485,7 @@ func checkAndRemoveImages(ctx context.Context, s *terraform.State) error {
 	retryDeleteCount := 0
 	for i := 0; i < len(images); {
 		img := images[i]
-		_, err := client.ImageRemove(ctx, img.ID, image.RemoveOptions{
+		_, err = client.ImageRemove(ctx, img.ID, image.RemoveOptions{
 			Force: true,
 		})
 		if err != nil {
@@ -1415,14 +1503,15 @@ func checkAndRemoveImages(ctx context.Context, s *terraform.State) error {
 	}
 
 	imagesAfterDelete, err := client.ImageList(ctx, image.ListOptions{
-		Filters: filters,
+		Filters: filts,
 	})
 	if err != nil {
 		return err
 	}
 
 	if len(imagesAfterDelete) != 0 {
-		return fmt.Errorf("Expected images of pattern '%s' to be deleted, but there is/are still %d", imagePattern, len(imagesAfterDelete))
+		return fmt.Errorf("expected images of pattern '%s' to be deleted, but there is/are still %d",
+			imagePattern, len(imagesAfterDelete))
 	}
 
 	return nil
@@ -1433,23 +1522,22 @@ func testAccServiceRunning(resourceName string, service *swarm.Service) resource
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Resource with name '%s' not found in state", resourceName)
+			return fmt.Errorf("resource with name '%s' not found in state", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 		inspectedService, _, err := client.ServiceInspectWithRaw(ctx, rs.Primary.ID, types.ServiceInspectOptions{})
 		if err != nil {
-			return fmt.Errorf("Service with ID '%s': %w", rs.Primary.ID, err)
+			return fmt.Errorf("service with ID '%s': %w", rs.Primary.ID, err)
 		}
 
 		// we set the value to the pointer to be able to use the value
 		// outside of the function
 		*service = inspectedService
 		return nil
-
 	}
 }

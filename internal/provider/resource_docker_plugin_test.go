@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -297,7 +298,7 @@ func TestAccDockerPlugin_full(t *testing.T) {
 
 	testCheckPluginInspect := func(*terraform.State) error {
 		if p.Enabled != false {
-			return fmt.Errorf("Plugin Enabled is wrong: %v", p.Enabled)
+			return fmt.Errorf("plugin Enabled is wrong: %v", p.Enabled)
 		}
 
 		return nil
@@ -388,23 +389,22 @@ func testAccPluginCreated(resourceName string, plugin *types.Plugin) resource.Te
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Resource with name '%s' not found in state", resourceName)
+			return fmt.Errorf("resource with name '%s' not found in state", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 		inspectedPlugin, _, err := client.PluginInspectWithRaw(ctx, rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Plugin with ID '%s': %w", rs.Primary.ID, err)
+			return fmt.Errorf("plugin with ID '%s': %w", rs.Primary.ID, err)
 		}
 
 		// we set the value to the pointer to be able to use the value
 		// outside of the function
 		plugin = inspectedPlugin
 		return nil
-
 	}
 }

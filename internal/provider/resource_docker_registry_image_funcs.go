@@ -7,12 +7,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/api/types/registry"
 	"io"
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/registry"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -23,7 +24,7 @@ import (
 )
 
 func resourceDockerRegistryImageCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 	providerConfig := meta.(*ProviderConfig)
 	name := d.Get("name").(string)
 	log.Printf("[DEBUG] Creating docker image %s", name)
@@ -34,21 +35,23 @@ func resourceDockerRegistryImageCreate(ctx context.Context, d *schema.ResourceDa
 	if err != nil {
 		return diag.Errorf("resourceDockerRegistryImageCreate: Unable to get authConfig for registry: %s", err)
 	}
-	if err := pushDockerRegistryImage(ctx, client, pushOpts, authConfig.Username, authConfig.Password); err != nil {
+	if err = pushDockerRegistryImage(ctx, cli, pushOpts, authConfig.Username, authConfig.Password); err != nil {
 		return diag.Errorf("Error pushing docker image: %s", err)
 	}
 
 	insecureSkipVerify := d.Get("insecure_skip_verify").(bool)
-	digest, err := getImageDigestWithFallback(pushOpts, authConfig.ServerAddress, authConfig.Username, authConfig.Password, insecureSkipVerify)
+	digest, err := getImageDigestWithFallback(pushOpts, authConfig.ServerAddress,
+		authConfig.Username, authConfig.Password, insecureSkipVerify)
 	if err != nil {
 		return diag.Errorf("Unable to create image, image not found: %s", err)
 	}
 	d.SetId(digest)
-	d.Set("sha256_digest", digest)
+	_ = d.Set("sha256_digest", digest)
+
 	return nil
 }
 
-func resourceDockerRegistryImageRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+func resourceDockerRegistryImageRead(_ context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	providerConfig := meta.(*ProviderConfig)
 	name := d.Get("name").(string)
 	pushOpts := createPushImageOptions(name)
@@ -58,17 +61,19 @@ func resourceDockerRegistryImageRead(ctx context.Context, d *schema.ResourceData
 	}
 
 	insecureSkipVerify := d.Get("insecure_skip_verify").(bool)
-	digest, err := getImageDigestWithFallback(pushOpts, authConfig.ServerAddress, authConfig.Username, authConfig.Password, insecureSkipVerify)
+	digest, err := getImageDigestWithFallback(pushOpts, authConfig.ServerAddress,
+		authConfig.Username, authConfig.Password, insecureSkipVerify)
 	if err != nil {
 		log.Printf("Got error getting registry image digest: %s", err)
 		d.SetId("")
 		return nil
 	}
-	d.Set("sha256_digest", digest)
+	_ = d.Set("sha256_digest", digest)
+
 	return nil
 }
 
-func resourceDockerRegistryImageDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+func resourceDockerRegistryImageDelete(_ context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	if d.Get("keep_remotely").(bool) {
 		return nil
 	}
@@ -81,13 +86,16 @@ func resourceDockerRegistryImageDelete(ctx context.Context, d *schema.ResourceDa
 	}
 
 	digest := d.Get("sha256_digest").(string)
-	err = deleteDockerRegistryImage(pushOpts, authConfig.ServerAddress, digest, authConfig.Username, authConfig.Password, true, false)
+	err = deleteDockerRegistryImage(pushOpts, authConfig.ServerAddress, digest,
+		authConfig.Username, authConfig.Password, true, false)
 	if err != nil {
-		err = deleteDockerRegistryImage(pushOpts, authConfig.ServerAddress, pushOpts.Tag, authConfig.Username, authConfig.Password, true, true)
+		err = deleteDockerRegistryImage(pushOpts, authConfig.ServerAddress, pushOpts.Tag,
+			authConfig.Username, authConfig.Password, true, true)
 		if err != nil {
 			return diag.Errorf("Got error deleting registry image: %s", err)
 		}
 	}
+
 	return nil
 }
 
@@ -95,7 +103,7 @@ func resourceDockerRegistryImageUpdate(ctx context.Context, d *schema.ResourceDa
 	return resourceDockerRegistryImageRead(ctx, d, meta)
 }
 
-// Helpers
+// Helpers.
 type internalPushImageOptions struct {
 	Name               string
 	FqName             string
@@ -200,13 +208,14 @@ func createImageBuildOptions(buildOptions map[string]any) types.ImageBuildOption
 	return buildImageOptions
 }
 
-func pushDockerRegistryImage(ctx context.Context, client *client.Client, pushOpts internalPushImageOptions, username string, password string) error {
+func pushDockerRegistryImage(ctx context.Context, client *client.Client, pushOpts internalPushImageOptions,
+	username, password string) error {
 	pushOptions := image.PushOptions{}
 	if username != "" {
 		auth := registry.AuthConfig{Username: username, Password: password}
 		authBytes, err := json.Marshal(auth)
 		if err != nil {
-			return fmt.Errorf("Error creating push options: %s", err)
+			return fmt.Errorf("error creating push options: %s", err)
 		}
 		authBase64 := base64.URLEncoding.EncodeToString(authBytes)
 		pushOptions.RegistryAuth = authBase64
@@ -228,13 +237,14 @@ func pushDockerRegistryImage(ctx context.Context, client *client.Client, pushOpt
 		if err == io.EOF {
 			break
 		}
-		if err := json.Unmarshal(streamBytes, &errorMessage); err != nil {
+		if err = json.Unmarshal(streamBytes, &errorMessage); err != nil {
 			return err
 		}
 		if errorMessage.Error != "" {
-			return fmt.Errorf("Error pushing image: %s", errorMessage.Error)
+			return fmt.Errorf("error pushing image: %s", errorMessage.Error)
 		}
 	}
+
 	log.Printf("[DEBUG] Pushed image: %s", pushOpts.FqName)
 	return nil
 }
@@ -245,27 +255,36 @@ func getAuthConfigForRegistry(
 	if authConfig, ok := providerConfig.AuthConfigs.Configs[registryWithoutProtocol]; ok {
 		return authConfig, nil
 	}
-	return registry.AuthConfig{}, fmt.Errorf("no auth config found for registry %s in auth configs: %#v", registryWithoutProtocol, providerConfig.AuthConfigs.Configs)
+
+	return registry.AuthConfig{}, fmt.Errorf("no auth config found for registry %s in auth configs: %#v",
+		registryWithoutProtocol, providerConfig.AuthConfigs.Configs)
 }
 
 func buildHttpClientForRegistry(registryAddressWithProtocol string, insecureSkipVerify bool) *http.Client {
-	client := http.DefaultClient
+	cli := http.DefaultClient
 
 	if strings.HasPrefix(registryAddressWithProtocol, "https://") {
-		client.Transport = &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: insecureSkipVerify}, Proxy: http.ProxyFromEnvironment}
+		cli.Transport = &http.Transport{TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: insecureSkipVerify,
+		},
+			Proxy: http.ProxyFromEnvironment,
+		}
 	} else {
-		client.Transport = &http.Transport{Proxy: http.ProxyFromEnvironment}
+		cli.Transport = &http.Transport{Proxy: http.ProxyFromEnvironment}
 	}
 
-	return client
+	return cli
 }
 
-func deleteDockerRegistryImage(pushOpts internalPushImageOptions, registryWithProtocol string, sha256Digest, username, password string, insecureSkipVerify, fallback bool) error {
-	client := buildHttpClientForRegistry(registryWithProtocol, insecureSkipVerify)
+func deleteDockerRegistryImage(pushOpts internalPushImageOptions, registryWithProtocol, sha256Digest,
+	username, password string, insecureSkipVerify, fallback bool) error {
+	cli := buildHttpClientForRegistry(registryWithProtocol, insecureSkipVerify)
 
-	req, err := http.NewRequest("DELETE", registryWithProtocol+"/v2/"+pushOpts.Repository+"/manifests/"+sha256Digest, nil)
+	ctx := context.TODO()
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete,
+		registryWithProtocol+"/v2/"+pushOpts.Repository+"/manifests/"+sha256Digest, nil)
 	if err != nil {
-		return fmt.Errorf("Error deleting registry image: %s", err)
+		return fmt.Errorf("error deleting registry image: %s", err.Error())
 	}
 
 	if username != "" {
@@ -283,9 +302,9 @@ func deleteDockerRegistryImage(pushOpts internalPushImageOptions, registryWithPr
 
 	setupHTTPHeadersForRegistryRequests(req, fallback)
 
-	resp, err := client.Do(req)
+	resp, err := cli.Do(req)
 	if err != nil {
-		return fmt.Errorf("Error during registry request: %s", err)
+		return fmt.Errorf("error during registry request: %s", err.Error())
 	}
 
 	switch resp.StatusCode {
@@ -296,39 +315,46 @@ func deleteDockerRegistryImage(pushOpts internalPushImageOptions, registryWithPr
 	// Either OAuth is required or the basic auth creds were invalid
 	case http.StatusUnauthorized:
 		if !strings.HasPrefix(resp.Header.Get("www-authenticate"), "Bearer") {
-			return fmt.Errorf("Bad credentials: %s", resp.Status)
+			return fmt.Errorf("bad credentials: %s", resp.Status)
 		}
 
-		token, err := getAuthToken(resp.Header.Get("www-authenticate"), username, password, client)
+		token, err := getAuthToken(resp.Header.Get("www-authenticate"), username, password, cli)
 		if err != nil {
 			return err
 		}
 
 		req.Header.Set("Authorization", "Bearer "+token)
-		oauthResp, err := client.Do(req)
+		defer req.Body.Close()
+		oauthResp, err := cli.Do(req)
 		if err != nil {
 			return err
 		}
+		defer oauthResp.Body.Close()
+
 		switch oauthResp.StatusCode {
 		case http.StatusOK, http.StatusAccepted, http.StatusNotFound:
 			return nil
 		default:
-			return fmt.Errorf("Got bad response from registry: %s", resp.Status)
+			return fmt.Errorf("got bad response from registry: %s", resp.Status)
 		}
 		// Some unexpected status was given, return an error
 	default:
-		return fmt.Errorf("Got bad response from registry: %s", resp.Status)
+		return fmt.Errorf("got bad response from registry: %s", resp.Status)
 	}
 }
 
-func getImageDigestWithFallback(opts internalPushImageOptions, serverAddress string, username, password string, insecureSkipVerify bool) (string, error) {
-	digest, err := getImageDigest(opts.Registry, serverAddress, opts.Repository, opts.Tag, username, password, insecureSkipVerify, false)
+func getImageDigestWithFallback(opts internalPushImageOptions, serverAddress string,
+	username, password string, insecureSkipVerify bool) (string, error) {
+	digest, err := getImageDigest(opts.Registry, serverAddress, opts.Repository, opts.Tag,
+		username, password, insecureSkipVerify, false)
 	if err != nil {
-		digest, err = getImageDigest(opts.Registry, serverAddress, opts.Repository, opts.Tag, username, password, insecureSkipVerify, true)
+		digest, err = getImageDigest(opts.Registry, serverAddress, opts.Repository, opts.Tag,
+			username, password, insecureSkipVerify, true)
 		if err != nil {
-			return "", fmt.Errorf("unable to get digest: %s", err)
+			return "", fmt.Errorf("unable to get digest: %w", err)
 		}
 	}
+
 	return digest, nil
 }
 
@@ -342,5 +368,6 @@ func createPushImageOptions(image string) internalPushImageOptions {
 		Tag:                pullOpts.Tag,
 		FqName:             fmt.Sprintf("%s/%s:%s", pullOpts.Registry, pullOpts.Repository, pullOpts.Tag),
 	}
+
 	return pushOpts
 }

@@ -3,6 +3,7 @@ package provider
 import (
 	"bufio"
 	"context"
+
 	container2 "github.com/docker/docker/api/types/container"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"

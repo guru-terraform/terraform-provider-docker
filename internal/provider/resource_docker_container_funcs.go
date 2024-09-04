@@ -9,11 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"log"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
 	"github.com/docker/cli/opts"
 	"github.com/docker/docker/api/types"
@@ -42,7 +43,7 @@ var (
 )
 
 // NOTE mavogel: we keep this global var for tracking
-// the time in the create and read func
+// the time in the create and read func.
 var creationTime time.Time
 
 func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
@@ -418,7 +419,6 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if v, ok := d.GetOk("upload"); ok {
-
 		var mode int64
 		for _, upload := range v.(*schema.Set).List() {
 			content := upload.(map[string]any)["content"].(string)
@@ -504,7 +504,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 					if err != nil {
 						result <- fmt.Errorf("error inspecting container state: %s", err)
 					}
-					//infos.ContainerJSONBase.State.Health is only set when there is a healthcheck defined on the container resource
+					// infos.ContainerJSONBase.State.Health is only set when there is a healthcheck defined on the container resource
 					if infos.ContainerJSONBase.State.Health.Status == types.Healthy {
 						log.Printf("[DEBUG] container state is healthy")
 						break
@@ -575,7 +575,7 @@ func resourceDockerContainerCreate(ctx context.Context, d *schema.ResourceData, 
 				// If the goroutine does not finish writing into the buffer by this line, we will have no logs.
 				// Thus, waiting for the goroutine to finish
 				<-logsRead
-				d.Set("container_logs", b.String())
+				_ = d.Set("container_logs", b.String())
 			}
 		}
 	}
@@ -640,12 +640,12 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	if !cont.State.Running {
-		d.Set("exit_code", cont.State.ExitCode)
+		_ = d.Set("exit_code", cont.State.ExitCode)
 	}
 
 	// Read Network Settings
 	if cont.NetworkSettings != nil {
-		d.Set("bridge", cont.NetworkSettings.Bridge)
+		_ = d.Set("bridge", cont.NetworkSettings.Bridge)
 		if err := d.Set("ports", flattenContainerPorts(cont.NetworkSettings.Ports)); err != nil {
 			log.Printf("[WARN] failed to set ports from API: %s", err)
 		}
@@ -656,51 +656,51 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 
 	// TODO all the other attributes
 	d.SetId(cont.ID)
-	d.Set("name", strings.TrimLeft(cont.Name, "/")) // api prefixes with '/' ...
-	d.Set("rm", cont.HostConfig.AutoRemove)
-	d.Set("read_only", cont.HostConfig.ReadonlyRootfs)
+	_ = d.Set("name", strings.TrimLeft(cont.Name, "/")) // api prefixes with '/' ...
+	_ = d.Set("rm", cont.HostConfig.AutoRemove)
+	_ = d.Set("read_only", cont.HostConfig.ReadonlyRootfs)
 	// "start" can't be imported
 	// attach
 	// logs
 	// "must_run" can't be imported
 	// container_logs
-	d.Set("image", cont.Image)
-	d.Set("hostname", cont.Config.Hostname)
-	d.Set("domainname", cont.Config.Domainname)
-	d.Set("command", cont.Config.Cmd)
-	d.Set("entrypoint", cont.Config.Entrypoint)
-	d.Set("user", cont.Config.User)
-	d.Set("dns", cont.HostConfig.DNS)
-	d.Set("dns_opts", cont.HostConfig.DNSOptions)
-	d.Set("security_opts", cont.HostConfig.SecurityOpt)
-	d.Set("dns_search", cont.HostConfig.DNSSearch)
-	d.Set("publish_all_ports", cont.HostConfig.PublishAllPorts)
-	d.Set("restart", cont.HostConfig.RestartPolicy.Name)
-	d.Set("max_retry_count", cont.HostConfig.RestartPolicy.MaximumRetryCount)
+	_ = d.Set("image", cont.Image)
+	_ = d.Set("hostname", cont.Config.Hostname)
+	_ = d.Set("domainname", cont.Config.Domainname)
+	_ = d.Set("command", cont.Config.Cmd)
+	_ = d.Set("entrypoint", cont.Config.Entrypoint)
+	_ = d.Set("user", cont.Config.User)
+	_ = d.Set("dns", cont.HostConfig.DNS)
+	_ = d.Set("dns_opts", cont.HostConfig.DNSOptions)
+	_ = d.Set("security_opts", cont.HostConfig.SecurityOpt)
+	_ = d.Set("dns_search", cont.HostConfig.DNSSearch)
+	_ = d.Set("publish_all_ports", cont.HostConfig.PublishAllPorts)
+	_ = d.Set("restart", cont.HostConfig.RestartPolicy.Name)
+	_ = d.Set("max_retry_count", cont.HostConfig.RestartPolicy.MaximumRetryCount)
 
 	// From what I can tell Init being nullable is only for container creation to allow
 	// dockerd to default it to the daemons own default settings. So this != nil
 	// check is most likely not ever going to fail. In the event that it does the
 	// "init" value will be set to false as there isn't much else we can do about it.
 	if cont.HostConfig.Init != nil {
-		d.Set("init", *cont.HostConfig.Init)
+		_ = d.Set("init", *cont.HostConfig.Init)
 	} else {
-		d.Set("init", false)
+		_ = d.Set("init", false)
 	}
-	d.Set("working_dir", cont.Config.WorkingDir)
+	_ = d.Set("working_dir", cont.Config.WorkingDir)
 	if len(cont.HostConfig.CapAdd) > 0 || len(cont.HostConfig.CapDrop) > 0 {
 		// TODO implement DiffSuppressFunc
-		d.Set("capabilities", []any{
+		_ = d.Set("capabilities", []any{
 			map[string]any{
 				"add":  cont.HostConfig.CapAdd,
 				"drop": cont.HostConfig.CapDrop,
 			},
 		})
 	}
-	d.Set("runtime", cont.HostConfig.Runtime)
-	d.Set("mounts", getDockerContainerMounts(cont))
+	_ = d.Set("runtime", cont.HostConfig.Runtime)
+	_ = d.Set("mounts", getDockerContainerMounts(cont))
 	// volumes
-	d.Set("tmpfs", cont.HostConfig.Tmpfs)
+	_ = d.Set("tmpfs", cont.HostConfig.Tmpfs)
 	if err := d.Set("host", flattenExtraHosts(cont.HostConfig.ExtraHosts)); err != nil {
 		log.Printf("[WARN] failed to set container hostconfig extrahosts from API: %s", err)
 	}
@@ -715,29 +715,29 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 	// https://github.com/guru-terraform/docker-provider/issues/242
 	// https://github.com/guru-terraform/docker-provider/pull/269
 
-	d.Set("privileged", cont.HostConfig.Privileged)
+	_ = d.Set("privileged", cont.HostConfig.Privileged)
 	if err = d.Set("devices", flattenDevices(cont.HostConfig.Devices)); err != nil {
 		log.Printf("[WARN] failed to set container hostconfig devices from API: %s", err)
 	}
 	// "destroy_grace_seconds" can't be imported
-	d.Set("memory", cont.HostConfig.Memory/1024/1024)
+	_ = d.Set("memory", cont.HostConfig.Memory/1024/1024)
 	if cont.HostConfig.MemorySwap > 0 {
-		d.Set("memory_swap", cont.HostConfig.MemorySwap/1024/1024)
+		_ = d.Set("memory_swap", cont.HostConfig.MemorySwap/1024/1024)
 	} else {
-		d.Set("memory_swap", cont.HostConfig.MemorySwap)
+		_ = d.Set("memory_swap", cont.HostConfig.MemorySwap)
 	}
-	d.Set("shm_size", cont.HostConfig.ShmSize/1024/1024)
-	d.Set("cpu_shares", cont.HostConfig.CPUShares)
-	d.Set("cpu_set", cont.HostConfig.CpusetCpus)
-	d.Set("log_driver", cont.HostConfig.LogConfig.Type)
-	d.Set("log_opts", cont.HostConfig.LogConfig.Config)
-	d.Set("storage_opts", cont.HostConfig.StorageOpt)
-	d.Set("network_mode", cont.HostConfig.NetworkMode)
-	d.Set("pid_mode", cont.HostConfig.PidMode)
-	d.Set("userns_mode", cont.HostConfig.UsernsMode)
+	_ = d.Set("shm_size", cont.HostConfig.ShmSize/1024/1024)
+	_ = d.Set("cpu_shares", cont.HostConfig.CPUShares)
+	_ = d.Set("cpu_set", cont.HostConfig.CpusetCpus)
+	_ = d.Set("log_driver", cont.HostConfig.LogConfig.Type)
+	_ = d.Set("log_opts", cont.HostConfig.LogConfig.Config)
+	_ = d.Set("storage_opts", cont.HostConfig.StorageOpt)
+	_ = d.Set("network_mode", cont.HostConfig.NetworkMode)
+	_ = d.Set("pid_mode", cont.HostConfig.PidMode)
+	_ = d.Set("userns_mode", cont.HostConfig.UsernsMode)
 	// "upload" can't be imported
 	if cont.Config.Healthcheck != nil {
-		d.Set("healthcheck", []any{
+		_ = d.Set("healthcheck", []any{
 			map[string]any{
 				"test":         cont.Config.Healthcheck.Test,
 				"interval":     cont.Config.Healthcheck.Interval.String(),
@@ -747,19 +747,19 @@ func resourceDockerContainerRead(ctx context.Context, d *schema.ResourceData, me
 			},
 		})
 	}
-	d.Set("sysctls", cont.HostConfig.Sysctls)
-	d.Set("ipc_mode", cont.HostConfig.IpcMode)
-	d.Set("group_add", cont.HostConfig.GroupAdd)
-	d.Set("tty", cont.Config.Tty)
-	d.Set("stdin_open", cont.Config.OpenStdin)
-	d.Set("stop_signal", cont.Config.StopSignal)
-	d.Set("stop_timeout", cont.Config.StopTimeout)
+	_ = d.Set("sysctls", cont.HostConfig.Sysctls)
+	_ = d.Set("ipc_mode", cont.HostConfig.IpcMode)
+	_ = d.Set("group_add", cont.HostConfig.GroupAdd)
+	_ = d.Set("tty", cont.Config.Tty)
+	_ = d.Set("stdin_open", cont.Config.OpenStdin)
+	_ = d.Set("stop_signal", cont.Config.StopSignal)
+	_ = d.Set("stop_timeout", cont.Config.StopTimeout)
 
 	if len(cont.HostConfig.DeviceRequests) > 0 {
 		// TODO pass the original gpus property string back to the resource
 		// var gpuOpts opts.GpuOpts
 		// gpuOpts = opts.GpuOpts{container.HostConfig.DeviceRequests}
-		d.Set("gpus", "all")
+		_ = d.Set("gpus", "all")
 	}
 
 	return nil
@@ -822,7 +822,6 @@ func resourceDockerContainerUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 	for _, attr := range attrs {
 		if d.HasChange(attr) {
-
 			// TODO update ulimits
 			// Updating ulimits seems not to work well.
 			// It succeeds to run `DockerClient.ContainerUpdate` with `ulimit` but actually `ulimit` aren't changed.

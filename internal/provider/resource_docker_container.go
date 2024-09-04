@@ -732,15 +732,15 @@ func resourceDockerContainer() *schema.Resource {
 				Description: "Network mode of the container.",
 				Optional:    true,
 				ForceNew:    true,
-				DiffSuppressFunc: func(k, oldV, newV string, d *schema.ResourceData) bool {
+				DiffSuppressFunc: func(_, o, n string, d *schema.ResourceData) bool {
 					// treat "" as "default", which is Docker's default value
-					if oldV == "" {
-						oldV = "default"
+					if o == "" {
+						o = "default"
 					}
-					if newV == "" {
-						newV = "default"
+					if n == "" {
+						n = "default"
 					}
-					return oldV == newV
+					return o == n
 				},
 			},
 
@@ -752,10 +752,11 @@ func resourceDockerContainer() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"name": {
-							Type:        schema.TypeString,
-							Description: "The name or id of the network to use. You can use `name` or `id` attribute from a `docker_network` resource.",
-							Required:    true,
-							ForceNew:    true,
+							Type: schema.TypeString,
+							Description: "The name or id of the network to use. " +
+								"You can use `name` or `id` attribute from a `docker_network` resource.",
+							Required: true,
+							ForceNew: true,
 						},
 						"aliases": {
 							Type:        schema.TypeSet,
@@ -795,23 +796,29 @@ func resourceDockerContainer() *schema.Resource {
 			},
 
 			"upload": {
-				Type:        schema.TypeSet,
-				Description: "Specifies files to upload to the container before starting it. Only one of `content` or `content_base64` can be set and at least one of them has to be set.",
-				Optional:    true,
-				ForceNew:    true,
+				Type: schema.TypeSet,
+				Description: "Specifies files to upload to the container before starting it. " +
+					"Only one of `content` or `content_base64` can be set and at least one of them has to be set.",
+				Optional: true,
+				ForceNew: true,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"content": {
-							Type:        schema.TypeString,
-							Description: "Literal string value to use as the object content, which will be uploaded as UTF-8-encoded text. Conflicts with `content_base64` & `source`",
-							Optional:    true,
+							Type: schema.TypeString,
+							Description: "Literal string value to use as the object content, " +
+								"which will be uploaded as UTF-8-encoded text. Conflicts with `content_base64` & `source`",
+							Optional: true,
 							// This is intentional. The container is mutated once, and never updated later.
 							// New configuration forces a new deployment, even with the same binaries.
 							ForceNew: true,
 						},
 						"content_base64": {
-							Type:             schema.TypeString,
-							Description:      "Base64-encoded data that will be decoded and uploaded as raw bytes for the object content. This allows safely uploading non-UTF8 binary data, but is recommended only for larger binary content such as the result of the `base64encode` interpolation function. See [here](https://github.com/guru-terraform/docker-provider/issues/48#issuecomment-374174588) for the reason. Conflicts with `content` & `source`",
+							Type: schema.TypeString,
+							Description: "Base64-encoded data that will be decoded and uploaded as raw bytes for the object content. " +
+								"This allows safely uploading non-UTF8 binary data, but is recommended only for larger " +
+								"binary content such as the result of the `base64encode` interpolation function. " +
+								"See [here](https://github.com/guru-terraform/docker-provider/issues/48#issuecomment-374174588) " +
+								"for the reason. Conflicts with `content` & `source`",
 							Optional:         true,
 							ForceNew:         true,
 							ValidateDiagFunc: validateStringIsBase64Encoded(),
@@ -830,16 +837,18 @@ func resourceDockerContainer() *schema.Resource {
 							ForceNew:    true,
 						},
 						"source": {
-							Type:        schema.TypeString,
-							Description: "A filename that references a file which will be uploaded as the object content. This allows for large file uploads that do not get stored in state. Conflicts with `content` & `content_base64`",
-							Optional:    true,
-							ForceNew:    true,
+							Type: schema.TypeString,
+							Description: "A filename that references a file which will be uploaded as the object content. " +
+								"This allows for large file uploads that do not get stored in state. Conflicts with `content` & `content_base64`",
+							Optional: true,
+							ForceNew: true,
 						},
 						"source_hash": {
-							Type:        schema.TypeString,
-							Description: "If using `source`, this will force an update if the file content has updated but the filename has not. ",
-							Optional:    true,
-							ForceNew:    true,
+							Type: schema.TypeString,
+							Description: "If using `source`, this will force an update " +
+								"if the file content has updated but the filename has not. ",
+							Optional: true,
+							ForceNew: true,
 						},
 					},
 				},
@@ -854,10 +863,12 @@ func resourceDockerContainer() *schema.Resource {
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
 						"test": {
-							Type:        schema.TypeList,
-							Description: "Command to run to check health. For example, to run `curl -f localhost/health` set the command to be `[\"CMD\", \"curl\", \"-f\", \"localhost/health\"]`.",
-							Required:    true,
-							Elem:        &schema.Schema{Type: schema.TypeString},
+							Type: schema.TypeList,
+							Description: "Command to run to check health. " +
+								"For example, to run `curl -f localhost/health` " +
+								"set the command to be `[\"CMD\", \"curl\", \"-f\", \"localhost/health\"]`.",
+							Required: true,
+							Elem:     &schema.Schema{Type: schema.TypeString},
 						},
 						"interval": {
 							Type:             schema.TypeString,
@@ -874,8 +885,9 @@ func resourceDockerContainer() *schema.Resource {
 							ValidateDiagFunc: validateDurationGeq0(),
 						},
 						"start_period": {
-							Type:             schema.TypeString,
-							Description:      "Start period for the container to initialize before counting retries towards unstable (ms|s|m|h). Defaults to `0s`.",
+							Type: schema.TypeString,
+							Description: "Start period for the container to initialize " +
+								"before counting retries towards unstable (ms|s|m|h). Defaults to `0s`.",
 							Default:          "0s",
 							Optional:         true,
 							ValidateDiagFunc: validateDurationGeq0(),
@@ -905,11 +917,12 @@ func resourceDockerContainer() *schema.Resource {
 				ForceNew:    true,
 			},
 			"ipc_mode": {
-				Type:        schema.TypeString,
-				Description: "IPC sharing mode for the container. Possible values are: `none`, `private`, `shareable`, `container:<name|id>` or `host`.",
-				Optional:    true,
-				ForceNew:    true,
-				Computed:    true,
+				Type: schema.TypeString,
+				Description: "IPC sharing mode for the container. " +
+					"Possible values are: `none`, `private`, `shareable`, `container:<name|id>` or `host`.",
+				Optional: true,
+				ForceNew: true,
+				Computed: true,
 			},
 			"group_add": {
 				Type:        schema.TypeSet,
@@ -920,10 +933,11 @@ func resourceDockerContainer() *schema.Resource {
 				Set:         schema.HashString,
 			},
 			"init": {
-				Type:        schema.TypeBool,
-				Description: "Configured whether an init process should be injected for this container. If unset this will default to the `dockerd` defaults.",
-				Optional:    true,
-				Computed:    true,
+				Type: schema.TypeBool,
+				Description: "Configured whether an init process should be injected for this container. " +
+					"If unset this will default to the `dockerd` defaults.",
+				Optional: true,
+				Computed: true,
 			},
 			"tty": {
 				Type:        schema.TypeBool,
@@ -946,10 +960,11 @@ func resourceDockerContainer() *schema.Resource {
 				ForceNew:    true,
 			},
 			"gpus": {
-				Type:        schema.TypeString,
-				Description: "GPU devices to add to the container. Currently, only the value `all` is supported. Passing any other value will result in unexpected behavior.",
-				Optional:    true,
-				ForceNew:    true,
+				Type: schema.TypeString,
+				Description: "GPU devices to add to the container. Currently, " +
+					"only the value `all` is supported. Passing any other value will result in unexpected behavior.",
+				Optional: true,
+				ForceNew: true,
 			},
 			"cgroupns_mode": {
 				Type:        schema.TypeString,
@@ -962,8 +977,8 @@ func resourceDockerContainer() *schema.Resource {
 }
 
 func suppressIfPortsDidNotChangeForMigrationV0ToV1() schema.SchemaDiffSuppressFunc {
-	return func(k, old, new string, d *schema.ResourceData) bool {
-		if k == "ports.#" && old != new {
+	return func(k, o, n string, d *schema.ResourceData) bool {
+		if k == "ports.#" && o != n {
 			log.Printf("[DEBUG] suppress diff ports: old and new don't have the same length")
 			return false
 		}
@@ -988,7 +1003,8 @@ func suppressIfPortsDidNotChangeForMigrationV0ToV1() schema.SchemaDiffSuppressFu
 					log.Printf("[DEBUG] suppress diff ports: comparing port '%v'", oldInternalPort)
 					if portNewMapped["protocol"] != portOldMapped["protocol"] {
 						if containsPortWithProtocol(portsNew, portOldMapped["internal"], portOldMapped["protocol"]) {
-							log.Printf("[DEBUG] suppress diff ports: found another port in new list with the same protocol for '%v", oldInternalPort)
+							log.Printf("[DEBUG] suppress diff ports: "+
+								"found another port in new list with the same protocol for '%v", oldInternalPort)
 							continue
 						}
 

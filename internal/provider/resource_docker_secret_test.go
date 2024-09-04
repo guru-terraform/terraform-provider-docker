@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -16,11 +17,11 @@ func TestAccDockerSecret_basic(t *testing.T) {
 
 	testCheckSecretInspect := func(*terraform.State) error {
 		if s.Spec.Name == "" {
-			return fmt.Errorf("Secret Spec.Name is wrong: %v", s.Spec.Name)
+			return fmt.Errorf("secret Spec.Name is wrong: %v", s.Spec.Name)
 		}
 
 		if len(s.Spec.Labels) != 1 || !mapEquals("foo", "bar", s.Spec.Labels) {
-			return fmt.Errorf("Secret Spec.Labels is wrong: %v", s.Spec.Labels)
+			return fmt.Errorf("secret Spec.Labels is wrong: %v", s.Spec.Labels)
 		}
 
 		return nil
@@ -138,7 +139,7 @@ func TestAccDockerSecret_labels(t *testing.T) {
 
 // ///////////
 // Helpers
-// ///////////
+// ///////////.
 func testCheckDockerSecretDestroy(ctx context.Context, s *terraform.State) error {
 	client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 	for _, rs := range s.RootModule().Resources {
@@ -150,7 +151,7 @@ func testCheckDockerSecretDestroy(ctx context.Context, s *terraform.State) error
 		_, _, err := client.SecretInspectWithRaw(ctx, id)
 
 		if err == nil {
-			return fmt.Errorf("Secret with id '%s' still exists", id)
+			return fmt.Errorf("secret with id '%s' still exists", id)
 		}
 		return nil
 	}
@@ -162,23 +163,22 @@ func testAccServiceSecretCreated(resourceName string, secret *swarm.Secret) reso
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Resource with name '%s' not found in state", resourceName)
+			return fmt.Errorf("resource with name '%s' not found in state", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 		inspectedSecret, _, err := client.SecretInspectWithRaw(ctx, rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Secret with ID '%s': %w", rs.Primary.ID, err)
+			return fmt.Errorf("secret with ID '%s': %w", rs.Primary.ID, err)
 		}
 
 		// we set the value to the pointer to be able to use the value
 		// outside of the function
 		*secret = inspectedSecret
 		return nil
-
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"path/filepath"
@@ -28,7 +27,7 @@ type Config struct {
 	CertPath string
 }
 
-// buildHTTPClientFromBytes builds the http client from bytes (content of the files)
+// buildHTTPClientFromBytes builds the http client from bytes (content of the files).
 func buildHTTPClientFromBytes(caPEMCert, certPEMBlock, keyPEMBlock []byte) (*http.Client, error) {
 	tlsConfig := &tls.Config{}
 	if certPEMBlock != nil && keyPEMBlock != nil {
@@ -44,7 +43,7 @@ func buildHTTPClientFromBytes(caPEMCert, certPEMBlock, keyPEMBlock []byte) (*htt
 	} else {
 		caPool := x509.NewCertPool()
 		if !caPool.AppendCertsFromPEM(caPEMCert) {
-			return nil, errors.New("Could not add RootCA pem")
+			return nil, errors.New("could not add RootCA pem")
 		}
 		tlsConfig.RootCAs = caPool
 	}
@@ -91,11 +90,11 @@ func defaultPooledTransport() *http.Transport {
 func (c *Config) NewClient() (*client.Client, error) {
 	if c.Cert != "" || c.Key != "" {
 		if c.Cert == "" || c.Key == "" {
-			return nil, fmt.Errorf("cert_material, and key_material must be specified")
+			return nil, errors.New("cert_material, and key_material must be specified")
 		}
 
 		if c.CertPath != "" {
-			return nil, fmt.Errorf("cert_path must not be specified")
+			return nil, errors.New("cert_path must not be specified")
 		}
 
 		httpClient, err := buildHTTPClientFromBytes([]byte(c.Ca), []byte(c.Cert), []byte(c.Key))
@@ -149,7 +148,7 @@ type Data struct {
 	DockerImages map[string]*image.Summary
 }
 
-// ProviderConfig for the custom registry provider
+// ProviderConfig for the custom registry provider.
 type ProviderConfig struct {
 	DockerClient *client.Client
 	AuthConfigs  *AuthConfigs

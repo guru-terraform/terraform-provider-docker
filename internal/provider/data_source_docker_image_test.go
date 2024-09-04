@@ -3,11 +3,12 @@ package provider
 import (
 	"context"
 	"fmt"
-	"github.com/docker/docker/api/types/image"
 	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/docker/docker/api/types/image"
 
 	"github.com/docker/docker/api/types/filters"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -157,7 +158,7 @@ func TestAccDockerImageDataSource_withNonExistentImage(t *testing.T) {
 	})
 }
 
-// Helpers
+// Helpers.
 func pullImageForTest(t *testing.T, imageName string) {
 	cmd := exec.Command("docker", "pull", imageName)
 	if err := cmd.Run(); err != nil {

@@ -2,8 +2,8 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/docker/docker/api/types/registry"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +11,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/docker/docker/api/types/registry"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -32,8 +34,7 @@ func TestAccDockerRegistryImageResource_mapping(t *testing.T) {
 
 	dummyProvider := New("dev")()
 	dummyResource := dummyProvider.ResourcesMap["docker_image"]
-	dummyResource.CreateContext = func(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
-
+	dummyResource.CreateContext = func(_ context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 		if value, ok := d.GetOk("build"); ok {
 			for _, rawBuild := range value.(*schema.Set).List() {
 				build := rawBuild.(map[string]any)
@@ -93,14 +94,14 @@ func TestAccDockerRegistryImageResource_mapping(t *testing.T) {
 		}
 		return nil
 	}
-	dummyResource.UpdateContext = func(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+	dummyResource.UpdateContext = func(_ context.Context, _ *schema.ResourceData, _ any) diag.Diagnostics {
 		return nil
 	}
-	dummyResource.DeleteContext = func(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+	dummyResource.DeleteContext = func(_ context.Context, _ *schema.ResourceData, _ any) diag.Diagnostics {
 		return nil
 	}
-	dummyResource.ReadContext = func(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
-		d.Set("id", "foo")
+	dummyResource.ReadContext = func(_ context.Context, d *schema.ResourceData, _ any) diag.Diagnostics {
+		_ = d.Set("id", "foo")
 		return nil
 	}
 
@@ -126,7 +127,8 @@ func TestAccDockerImage_basic(t *testing.T) {
 	// run a Docker container which refers the Docker image to test "force_remove" option
 	containerName := "test-docker-image-force-remove"
 	ctx := context.Background()
-	if err := exec.Command("docker", "run", "--rm", "-d", "--name", containerName, "alpine:3.16.0", "tail", "-f", "/dev/null").Run(); err != nil {
+	if err := exec.Command("docker", "run", "--rm", "-d", "--name", containerName,
+		"alpine:3.16.0", "tail", "-f", "/dev/null").Run(); err != nil {
 		t.Fatal(err)
 	}
 	defer func() {
@@ -257,8 +259,8 @@ func TestAccDockerImage_data_pull_trigger(t *testing.T) {
 }
 
 func TestAccDockerImage_data_private(t *testing.T) {
-	registry := "127.0.0.1:15000"
-	image := "127.0.0.1:15000/tftest-service:v1"
+	reg := "127.0.0.1:15000"
+	img := "127.0.0.1:15000/tftest-service:v1"
 	ctx := context.Background()
 
 	resource.Test(t, resource.TestCase{
@@ -267,7 +269,8 @@ func TestAccDockerImage_data_private(t *testing.T) {
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image", "testAccDockerImageFromDataPrivateConfig"), registry, image),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image",
+					"testAccDockerImageFromDataPrivateConfig"), reg, img),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_image.foo_private", "repo_digest", imageRepoDigestRegexp),
 				),
@@ -280,10 +283,11 @@ func TestAccDockerImage_data_private(t *testing.T) {
 }
 
 func TestAccDockerImage_data_private_config_file(t *testing.T) {
-	registry := "127.0.0.1:15000"
-	image := "127.0.0.1:15000/tftest-service:v1"
+	reg := "127.0.0.1:15000"
+	img := "127.0.0.1:15000/tftest-service:v1"
 	wd, _ := os.Getwd()
-	dockerConfig := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing", "dockerconfig.json"), "\\", "\\\\")
+	dockerConfig := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing",
+		"dockerconfig.json"), "\\", "\\\\")
 	ctx := context.Background()
 
 	resource.Test(t, resource.TestCase{
@@ -292,7 +296,8 @@ func TestAccDockerImage_data_private_config_file(t *testing.T) {
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image", "testAccDockerImageFromDataPrivateConfigFile"), registry, dockerConfig, image),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image",
+					"testAccDockerImageFromDataPrivateConfigFile"), reg, dockerConfig, img),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_image.foo_private", "repo_digest", imageRepoDigestRegexp),
 				),
@@ -305,10 +310,11 @@ func TestAccDockerImage_data_private_config_file(t *testing.T) {
 }
 
 func TestAccDockerImage_data_private_config_file_content(t *testing.T) {
-	registry := "127.0.0.1:15000"
-	image := "127.0.0.1:15000/tftest-service:v1"
+	reg := "127.0.0.1:15000"
+	img := "127.0.0.1:15000/tftest-service:v1"
 	wd, _ := os.Getwd()
-	dockerConfig := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing", "dockerconfig.json"), "\\", "\\\\")
+	dockerConfig := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing",
+		"dockerconfig.json"), "\\", "\\\\")
 	ctx := context.Background()
 
 	resource.Test(t, resource.TestCase{
@@ -317,7 +323,8 @@ func TestAccDockerImage_data_private_config_file_content(t *testing.T) {
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image", "testAccDockerImageFromDataPrivateConfigFileContent"), registry, dockerConfig, image),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image",
+					"testAccDockerImageFromDataPrivateConfigFileContent"), reg, dockerConfig, img),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_image.foo_private", "repo_digest", imageRepoDigestRegexp),
 				),
@@ -330,7 +337,7 @@ func TestAccDockerImage_data_private_config_file_content(t *testing.T) {
 }
 
 // Changing the name attribute should also force a change of the dependent docker container
-// This test fails, if we remove the ForceTrue: true from the name attribute
+// This test fails, if we remove the ForceTrue: true from the name attribute.
 func TestAccDockerImage_name_attr_change(t *testing.T) {
 	resource.Test(t, resource.TestCase{
 		PreCheck:                  func() { testAccPreCheck(t) },
@@ -338,13 +345,15 @@ func TestAccDockerImage_name_attr_change(t *testing.T) {
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image", "testAccDockerImageName"), "ubuntu:precise@sha256:18305429afa14ea462f810146ba44d4363ae76e4c8dfc38288cf73aa07485005"),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image",
+					"testAccDockerImageName"), "ubuntu:precise@sha256:18305429afa14ea462f810146ba44d4363ae76e4c8dfc38288cf73aa07485005"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_image.ubuntu", "repo_digest", imageRepoDigestRegexp),
 				),
 			},
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image", "testAccDockerImageName"), "ubuntu:jammy@sha256:b6b83d3c331794420340093eb706a6f152d9c1fa51b262d9bf34594887c2c7ac"),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image",
+					"testAccDockerImageName"), "ubuntu:jammy@sha256:b6b83d3c331794420340093eb706a6f152d9c1fa51b262d9bf34594887c2c7ac"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestMatchResourceAttr("docker_image.ubuntu", "repo_digest", imageRepoDigestRegexp),
 				),
@@ -381,7 +390,7 @@ func testAccDockerImageDestroy(ctx context.Context, s *terraform.State) error {
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 		_, _, err := client.ImageInspectWithRaw(ctx, rs.Primary.Attributes["name"])
 		if err == nil {
-			return fmt.Errorf("Image still exists")
+			return errors.New("image still exists")
 		}
 	}
 	return nil
@@ -418,7 +427,8 @@ func TestAccDockerImage_platform(t *testing.T) {
 			{
 				Config: loadTestConfiguration(t, RESOURCE, "docker_image", "testAccDockerImagePlatform"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestCheckResourceAttr("docker_image.foo", "image_id", "sha256:8336f9f1d0946781f428a155536995f0d8a31209d65997e2a379a23e7a441b78"),
+					resource.TestCheckResourceAttr("docker_image.foo", "image_id",
+						"sha256:8336f9f1d0946781f428a155536995f0d8a31209d65997e2a379a23e7a441b78"),
 				),
 			},
 		},
@@ -481,7 +491,8 @@ func TestAccDockerImage_buildOutsideContext(t *testing.T) {
 			{
 				Config: loadTestConfiguration(t, RESOURCE, "docker_image", "testDockerImageDockerfileOutsideContext"),
 				Check: resource.ComposeTestCheckFunc(
-					resource.TestMatchResourceAttr("docker_image.outside_context", "name", regexp.MustCompile(`\Aoutside-context:latest\z`)),
+					resource.TestMatchResourceAttr("docker_image.outside_context",
+						"name", regexp.MustCompile(`\Aoutside-context:latest\z`)),
 				),
 			},
 		},
@@ -491,13 +502,15 @@ func TestAccDockerImage_buildOutsideContext(t *testing.T) {
 func TestAccDockerImageResource_build(t *testing.T) {
 	name := "tftest-dockerregistryimage:1.0"
 	wd, _ := os.Getwd()
-	context := strings.ReplaceAll((filepath.Join(wd, "..", "..", "scripts", "testing", "docker_registry_image_context")), "\\", "\\\\")
+	dContext := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing",
+		"docker_registry_image_context"), "\\", "\\\\")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image", "testBuildDockerImageNoKeepConfig"), name, context),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image",
+					"testBuildDockerImageNoKeepConfig"), name, dContext),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("docker_image.foo", "image_id"),
 				),
@@ -510,13 +523,15 @@ func TestAccDockerImageResource_build(t *testing.T) {
 func TestAccDockerImageResource_whitelistDockerignore(t *testing.T) {
 	name := "tftest-dockerregistryimage-whitelistdockerignore:1.0"
 	wd, _ := os.Getwd()
-	context := strings.ReplaceAll((filepath.Join(wd, "..", "..", "scripts", "testing", "docker_registry_image_file_whitelist_dockerignore")), "\\", "\\\\")
+	dContext := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing",
+		"docker_registry_image_file_whitelist_dockerignore"), "\\", "\\\\")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image", "testDockerImageFilePermissions"), name, context, "Dockerfile"),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image",
+					"testDockerImageFilePermissions"), name, dContext, "Dockerfile"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("docker_image.file_permissions", "image_id"),
 				),
@@ -531,17 +546,20 @@ func TestAccDockerImageResource_whitelistDockerignore(t *testing.T) {
 func TestAccDockerImageResource_correctFilePermissions(t *testing.T) {
 	name := "tftest-dockerregistryimage-filepermissions:1.0"
 	wd, _ := os.Getwd()
-	context := strings.ReplaceAll((filepath.Join(wd, "..", "..", "scripts", "testing", "docker_registry_image_file_permissions")), "\\", "\\\\")
+	dContext := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing",
+		"docker_registry_image_file_permissions"), "\\", "\\\\")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image", "testDockerImageFilePermissions"), name, context, "Dockerfile"),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image",
+					"testDockerImageFilePermissions"), name, dContext, "Dockerfile"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("docker_image.file_permissions", "image_id"),
 				),
-				// TODO another check which starts the the newly built docker image and checks the file permissions to see if they are correct
+				// TODO another check which starts the the newly built
+				// docker image and checks the file permissions to see if they are correct
 			},
 		},
 	})
@@ -551,8 +569,9 @@ func TestAccDockerImageResource_buildWithDockerignore(t *testing.T) {
 	name := "tftest-dockerregistryimage-ignore:1.0"
 	wd, _ := os.Getwd()
 	ctx := context.Background()
-	context := strings.ReplaceAll((filepath.Join(wd, "..", "..", "scripts", "testing", "docker_registry_image_context_dockerignore")), "\\", "\\\\")
-	ignoredFile := context + "/to_be_ignored"
+	dContext := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing",
+		"docker_registry_image_context_dockerignore"), "\\", "\\\\")
+	ignoredFile := dContext + "/to_be_ignored"
 	expectedSha := ""
 
 	resource.Test(t, resource.TestCase{
@@ -560,7 +579,8 @@ func TestAccDockerImageResource_buildWithDockerignore(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image", "testBuildDockerImageNoKeepJustCache"), "one", name, context),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image",
+					"testBuildDockerImageNoKeepJustCache"), "one", name, dContext),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("docker_image.one", "image_id"),
 					resource.TestCheckResourceAttrWith("docker_image.one", "image_id", func(value string) error {
@@ -578,11 +598,12 @@ func TestAccDockerImageResource_buildWithDockerignore(t *testing.T) {
 					}
 					f.Close()
 				},
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image", "testBuildDockerImageNoKeepJustCache"), "two", name, context),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_image",
+					"testBuildDockerImageNoKeepJustCache"), "two", name, dContext),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrWith("docker_image.two", "image_id", func(value string) error {
 						if value != expectedSha {
-							return fmt.Errorf("Image sha256_digest changed, expected %#v, got %#v", expectedSha, value)
+							return fmt.Errorf("image sha256_digest changed, expected %#v, got %#v", expectedSha, value)
 						}
 						return nil
 					}),
@@ -600,11 +621,11 @@ func testAccImageCreated(resourceName string, image *types.ImageInspect) resourc
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Resource with name '%s' not found in state", resourceName)
+			return fmt.Errorf("resource with name '%s' not found in state", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		name := rs.Primary.Attributes["name"]
@@ -616,14 +637,13 @@ func testAccImageCreated(resourceName string, image *types.ImageInspect) resourc
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 		inspectedImage, _, err := client.ImageInspectWithRaw(ctx, strippedID)
 		if err != nil {
-			return fmt.Errorf("Image with ID '%s': %w", strippedID, err)
+			return fmt.Errorf("image with ID '%s': %w", strippedID, err)
 		}
 
 		// we set the value to the pointer to be able to use the value
 		// outside of the function
 		*image = inspectedImage
 		return nil
-
 	}
 }
 

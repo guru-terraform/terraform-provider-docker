@@ -3,9 +3,10 @@ package provider
 import (
 	"context"
 	"encoding/json"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"log"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
 	"github.com/docker/docker/api/types/volume"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -118,11 +119,11 @@ func resourceDockerVolumeRead(ctx context.Context, d *schema.ResourceData, meta 
 	jsonObj, _ := json.MarshalIndent(volume, "", "\t")
 	log.Printf("[DEBUG] Docker volume inspect from readFunc: %s", jsonObj)
 
-	d.Set("name", volume.Name)
-	d.Set("labels", mapToLabelSet(volume.Labels))
-	d.Set("driver", volume.Driver)
-	d.Set("driver_opts", volume.Options)
-	d.Set("mountpoint", volume.Mountpoint)
+	_ = d.Set("name", volume.Name)
+	_ = d.Set("labels", mapToLabelSet(volume.Labels))
+	_ = d.Set("driver", volume.Driver)
+	_ = d.Set("driver_opts", volume.Options)
+	_ = d.Set("mountpoint", volume.Mountpoint)
 
 	return nil
 }

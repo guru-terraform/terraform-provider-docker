@@ -2,11 +2,6 @@ package provider
 
 import (
 	"context"
-	"log"
-	"net"
-	"regexp"
-	"strconv"
-
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
@@ -45,19 +40,22 @@ func resourceDockerNetwork() *schema.Resource {
 			},
 
 			"driver": {
-				Type:        schema.TypeString,
-				Description: "The driver of the Docker network. Possible values are `bridge`, `host`, `overlay`, `macvlan`. See [network docs](https://docs.docker.com/network/#network-drivers) for more details.",
-				Optional:    true,
-				ForceNew:    true,
-				Computed:    true,
+				Type: schema.TypeString,
+				Description: "The driver of the Docker network. Possible values are `bridge`, " +
+					"`host`, `overlay`, `macvlan`. See " +
+					"[network docs](https://docs.docker.com/network/#network-drivers) for more details.",
+				Optional: true,
+				ForceNew: true,
+				Computed: true,
 			},
 
 			"options": {
-				Type:        schema.TypeMap,
-				Description: "Only available with bridge networks. See [bridge options docs](https://docs.docker.com/engine/reference/commandline/network_create/#bridge-driver-options) for more details.",
-				Optional:    true,
-				ForceNew:    true,
-				Computed:    true,
+				Type: schema.TypeMap,
+				Description: "Only available with bridge networks. " +
+					"See [bridge options docs](https://docs.docker.com/engine/reference/commandline/network_create/#bridge-driver-options) for more details.",
+				Optional: true,
+				ForceNew: true,
+				Computed: true,
 			},
 
 			"internal": {
@@ -97,10 +95,11 @@ func resourceDockerNetwork() *schema.Resource {
 				ForceNew:    true,
 			},
 			"ipam_options": {
-				Type:        schema.TypeMap,
-				Description: "Provide explicit options to the IPAM driver. Valid options vary with `ipam_driver` and refer to that driver's documentation for more details.",
-				Optional:    true,
-				ForceNew:    true,
+				Type: schema.TypeMap,
+				Description: "Provide explicit options to the IPAM driver. " +
+					"Valid options vary with `ipam_driver` and refer to that driver's documentation for more details.",
+				Optional: true,
+				ForceNew: true,
 			},
 
 			"ipam_config": {
@@ -154,7 +153,7 @@ func resourceDockerNetwork() *schema.Resource {
 			{
 				Version: 0,
 				Type:    resourceDockerNetworkV0().CoreConfigSchema().ImpliedType(),
-				Upgrade: func(ctx context.Context, rawState map[string]any, meta any) (map[string]any, error) {
+				Upgrade: func(_ context.Context, rawState map[string]any, meta any) (map[string]any, error) {
 					return replaceLabelsMapFieldWithSetField(rawState), nil
 				},
 			},
@@ -162,50 +161,50 @@ func resourceDockerNetwork() *schema.Resource {
 	}
 }
 
-func suppressIfIPAMConfigWithIpv6Changes() schema.SchemaDiffSuppressFunc { //nolint:deadcode,unused
-	return func(k, old, new string, d *schema.ResourceData) bool {
-		// the initial case when the resource is created
-		if old == "" && new != "" {
-			return false
-		}
-
-		// if ipv6 is not given we do not consider
-		ipv6, ok := d.GetOk("ipv6")
-		if !ok {
-			return false
-		}
-
-		// if ipv6 is given but false we do not consider
-		isIPv6 := ipv6.(bool)
-		if !isIPv6 {
-			return false
-		}
-		if k == "ipam_config.#" {
-			log.Printf("[INFO] ipam_config: k: %q, old: %s, new: %s\n", k, old, new)
-			oldVal, _ := strconv.Atoi(string(old))
-			newVal, _ := strconv.Atoi(string(new))
-			log.Printf("[INFO] ipam_config: oldVal: %d, newVal: %d\n", oldVal, newVal)
-			if newVal <= oldVal {
-				log.Printf("[INFO] suppressingDiff for ipam_config: oldVal: %d, newVal: %d\n", oldVal, newVal)
-				return true
-			}
-		}
-		if regexp.MustCompile(`ipam_config\.\d+\.gateway`).MatchString(k) {
-			ip := net.ParseIP(old)
-			ipv4Address := ip.To4()
-			log.Printf("[INFO] ipam_config.gateway: k: %q, old: %s, new: %s - %v\n", k, old, new, ipv4Address != nil)
-			// is an ipv4Address and content changed from non-empty to empty
-			if ipv4Address != nil && old != "" && new == "" {
-				log.Printf("[INFO] suppressingDiff for ipam_config.gateway %q: oldVal: %s, newVal: %s\n", ipv4Address.String(), old, new)
-				return true
-			}
-		}
-		if regexp.MustCompile(`ipam_config\.\d+\.subnet`).MatchString(k) {
-			if old != "" && new == "" {
-				log.Printf("[INFO] suppressingDiff for ipam_config.subnet: oldVal: %s, newVal: %s\n", old, new)
-				return true
-			}
-		}
-		return false
-	}
-}
+//func suppressIfIPAMConfigWithIpv6Changes() schema.SchemaDiffSuppressFunc {
+//	return func(k, о, н string, d *schema.ResourceData) bool {
+//		// the initial case when the resource is created
+//		if о == "" && н != "" {
+//			return false
+//		}
+//
+//		// if ipv6 is not given we do not consider
+//		ipv6, ok := d.GetOk("ipv6")
+//		if !ok {
+//			return false
+//		}
+//
+//		// if ipv6 is given but false we do not consider
+//		isIPv6 := ipv6.(bool)
+//		if !isIPv6 {
+//			return false
+//		}
+//		if k == "ipam_config.#" {
+//			log.Printf("[INFO] ipam_config: k: %q, old: %s, new: %s\n", k, о, н)
+//			oldVal, _ := strconv.Atoi(string(о))
+//			newVal, _ := strconv.Atoi(string(н))
+//			log.Printf("[INFO] ipam_config: oldVal: %d, newVal: %d\n", oldVal, newVal)
+//			if newVal <= oldVal {
+//				log.Printf("[INFO] suppressingDiff for ipam_config: oldVal: %d, newVal: %d\n", oldVal, newVal)
+//				return true
+//			}
+//		}
+//		if regexp.MustCompile(`ipam_config\.\d+\.gateway`).MatchString(k) {
+//			ip := net.ParseIP(о)
+//			ipv4Address := ip.To4()
+//			log.Printf("[INFO] ipam_config.gateway: k: %q, old: %s, new: %s - %v\n", k, о, н, ipv4Address != nil)
+//			// is an ipv4Address and content changed from non-empty to empty
+//			if ipv4Address != nil && о != "" && н == "" {
+//				log.Printf("[INFO] suppressingDiff for ipam_config.gateway %q: oldVal: %s, newVal: %s\n", ipv4Address.String(), о, н)
+//				return true
+//			}
+//		}
+//		if regexp.MustCompile(`ipam_config\.\d+\.subnet`).MatchString(k) {
+//			if о != "" && н == "" {
+//				log.Printf("[INFO] suppressingDiff for ipam_config.subnet: oldVal: %s, newVal: %s\n", о, н)
+//				return true
+//			}
+//		}
+//		return false
+//	}
+//}

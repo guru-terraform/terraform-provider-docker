@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// resourceType the type of the resource
+// resourceType the type of the resource.
 type resourceType int
 
 const (
@@ -18,7 +18,7 @@ const (
 
 // String converts the the resourceType into
 // the name of the directory the test configuartions
-// are int
+// are int.
 func (r resourceType) String() string {
 	return [...]string{
 		"resources",
@@ -36,7 +36,7 @@ const (
 //
 // As a convention the test configurations are in
 // 'testdata/<resourceType>/<resourceName>/<testName>.tf', e.g.
-// 'testdata/resources/docker_container/testAccDockerContainerPrivateImage.tf'
+// 'testdata/resources/docker_container/testAccDockerContainerPrivateImage.tf'.
 func loadTestConfiguration(t *testing.T, resourceType resourceType, resourceName, testName string) string {
 	wd, err := os.Getwd()
 	if err != nil {
@@ -54,7 +54,7 @@ func loadTestConfiguration(t *testing.T, resourceType resourceType, resourceName
 }
 
 // mapEquals returns true if the expectedValue is found under the given key in
-// the map. Otherwise returns false, as well when the map ist nil
+// the map. Otherwise returns false, as well when the map ist nil.
 func mapEquals(key, expectedValue string, m map[string]string) bool {
 	if m == nil {
 		return false

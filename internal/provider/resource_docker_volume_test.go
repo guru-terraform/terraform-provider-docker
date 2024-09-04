@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/docker/docker/api/types/volume"
 	"testing"
+
+	"github.com/docker/docker/api/types/volume"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -43,23 +45,23 @@ func TestAccDockerVolume_full(t *testing.T) {
 
 	testCheckVolumeInspect := func(*terraform.State) error {
 		if v.Driver != "local" {
-			return fmt.Errorf("Volume Driver is wrong: %v", v.Driver)
+			return fmt.Errorf("volume Driver is wrong: %v", v.Driver)
 		}
 
 		if v.Labels == nil ||
 			!mapEquals("com.docker.compose.project", "test", v.Labels) ||
 			!mapEquals("com.docker.compose.volume", "foo", v.Labels) {
-			return fmt.Errorf("Volume Labels is wrong: %v", v.Labels)
+			return fmt.Errorf("volume Labels is wrong: %v", v.Labels)
 		}
 
 		if v.Options == nil ||
 			!mapEquals("device", "/dev/sda2", v.Options) ||
 			!mapEquals("type", "btrfs", v.Options) {
-			return fmt.Errorf("Volume Options is wrong: %v", v.Options)
+			return fmt.Errorf("volume Options is wrong: %v", v.Options)
 		}
 
 		if v.Scope != "local" {
-			return fmt.Errorf("Volume Scope is wrong: %v", v.Scope)
+			return fmt.Errorf("volume Scope is wrong: %v", v.Scope)
 		}
 
 		return nil
@@ -135,7 +137,7 @@ func checkDockerVolumeCreated(n string, volume *volume.Volume) resource.TestChec
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		ctx := context.Background()

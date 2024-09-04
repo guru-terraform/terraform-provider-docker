@@ -5,7 +5,6 @@ import (
 )
 
 func TestIsECRRepositoryURL(t *testing.T) {
-
 	if !isECRRepositoryURL("2385929435838.dkr.ecr.eu-central-1.amazonaws.com") {
 		t.Fatalf("Expected true")
 	}

@@ -13,7 +13,7 @@ import (
 // Depending on the aws cli command, the returned token is different
 // "aws ecr get-login-password" is a simply JWT, which needs to be prefixed with "AWS:" and then b64 encoded
 // "aws ecr get-authorization-token" is the best case, everything is encoded properly
-// in case someone passes an base64 decoded token from "aws ecr get-authorization-token" we need to b64 encode it again
+// in case someone passes an base64 decoded token from "aws ecr get-authorization-token" we need to b64 encode it again.
 func normalizeECRPasswordForHTTPUsage(password string) string {
 	if strings.HasPrefix(password, "ey") {
 		return b64.StdEncoding.EncodeToString([]byte("AWS:" + password))
@@ -24,7 +24,7 @@ func normalizeECRPasswordForHTTPUsage(password string) string {
 }
 
 // Docker operations need a JWT, so this function basically does the opposite as `normalizeECRPasswordForHTTPUsage`
-// aws ecr get-authorization-token does not return a JWT, but a base64 encoded string which we need to decode
+// aws ecr get-authorization-token does not return a JWT, but a base64 encoded string which we need to decode.
 func normalizeECRPasswordForDockerCLIUsage(password string) string {
 	if strings.HasPrefix(password, "ey") {
 		return password

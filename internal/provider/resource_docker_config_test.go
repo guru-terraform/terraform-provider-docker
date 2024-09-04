@@ -17,15 +17,15 @@ func TestAccDockerConfig_basic(t *testing.T) {
 
 	testCheckConfigInspect := func(*terraform.State) error {
 		if c.Spec.Name == "" {
-			return errors.New("Config Spec.Name is empty")
+			return errors.New("config Spec.Name is empty")
 		}
 
 		if len(c.Spec.Data) == 0 {
-			return errors.New("Config Spec.Data is empty")
+			return errors.New("config Spec.Data is empty")
 		}
 
 		if len(c.Spec.Labels) != 0 {
-			return fmt.Errorf("Config Spec.Labels is wrong: %v", c.Spec.Labels)
+			return fmt.Errorf("config Spec.Labels is wrong: %v", c.Spec.Labels)
 		}
 
 		return nil
@@ -113,7 +113,7 @@ func TestAccDockerConfig_basicUpdatable(t *testing.T) {
 
 // ///////////
 // Helpers
-// ///////////
+// ///////////.
 func testCheckDockerConfigDestroy(ctx context.Context, s *terraform.State) error {
 	client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 	for _, rs := range s.RootModule().Resources {
@@ -125,7 +125,7 @@ func testCheckDockerConfigDestroy(ctx context.Context, s *terraform.State) error
 		_, _, err := client.ConfigInspectWithRaw(ctx, id)
 
 		if err == nil {
-			return fmt.Errorf("Config with id '%s' still exists", id)
+			return fmt.Errorf("config with id '%s' still exists", id)
 		}
 		return nil
 	}
@@ -137,23 +137,22 @@ func testAccServiceConfigCreated(resourceName string, config *swarm.Config) reso
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Resource with name '%s' not found in state", resourceName)
+			return fmt.Errorf("resource with name '%s' not found in state", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 		inspectedConfig, _, err := client.ConfigInspectWithRaw(ctx, rs.Primary.ID)
 		if err != nil {
-			return fmt.Errorf("Config with ID '%s': %w", rs.Primary.ID, err)
+			return fmt.Errorf("config with ID '%s': %w", rs.Primary.ID, err)
 		}
 
 		// we set the value to the pointer to be able to use the value
 		// outside of the function
 		*config = inspectedConfig
 		return nil
-
 	}
 }

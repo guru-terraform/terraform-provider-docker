@@ -19,7 +19,7 @@ func resourceDockerTagCreate(ctx context.Context, d *schema.ResourceData, meta a
 	if err != nil {
 		return diag.Errorf("failed to ImageInspectWithRaw: %s", err)
 	}
-	d.Set("source_image_id", imageInspect.ID)
+	_ = d.Set("source_image_id", imageInspect.ID)
 	d.SetId(sourceImage + "." + targetImage)
 	return nil
 }

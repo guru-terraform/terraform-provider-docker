@@ -74,8 +74,8 @@ func resourceDockerConfigRead(ctx context.Context, d *schema.ResourceData, meta 
 	log.Printf("[DEBUG] Docker config inspect from readFunc: %s", jsonObj)
 
 	d.SetId(config.ID)
-	d.Set("name", config.Spec.Name)
-	d.Set("data", base64.StdEncoding.EncodeToString(config.Spec.Data))
+	_ = d.Set("name", config.Spec.Name)
+	_ = d.Set("data", base64.StdEncoding.EncodeToString(config.Spec.Data))
 	return nil
 }
 

@@ -3,9 +3,10 @@ package provider
 import (
 	"context"
 	"encoding/json"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"log"
 	"time"
+
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
 	"github.com/docker/docker/api/types/network"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -28,7 +29,7 @@ func resourceDockerNetworkCreate(ctx context.Context, d *schema.ResourceData, me
 	if v, ok := d.GetOk("labels"); ok {
 		createOpts.Labels = labelSetToMap(v.(*schema.Set))
 	}
-	//if v, ok := d.GetOk("check_duplicate"); ok {
+	// if v, ok := d.GetOk("check_duplicate"); ok {
 	//	createOpts.CheckDuplicate = v.(bool)
 	//}
 	if v, ok := d.GetOk("driver"); ok {
@@ -76,7 +77,7 @@ func resourceDockerNetworkCreate(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	d.SetId(retNetwork.ID)
-	// d.Set("check_duplicate") TODO mavogel
+	// _ = d.Set("check_duplicate") TODO mavogel
 	return resourceDockerNetworkRead(ctx, d, meta)
 }
 
@@ -162,25 +163,25 @@ func resourceDockerNetworkReadRefreshFunc(ctx context.Context,
 		jsonObj, _ := json.MarshalIndent(retNetwork, "", "\t")
 		log.Printf("[DEBUG] Docker network inspect: %s", jsonObj)
 
-		d.Set("name", retNetwork.Name)
-		d.Set("labels", mapToLabelSet(retNetwork.Labels))
-		d.Set("driver", retNetwork.Driver)
-		d.Set("internal", retNetwork.Internal)
-		d.Set("attachable", retNetwork.Attachable)
-		d.Set("ingress", retNetwork.Ingress)
-		d.Set("ipv6", retNetwork.EnableIPv6)
-		d.Set("ipam_driver", retNetwork.IPAM.Driver)
-		d.Set("ipam_options", retNetwork.IPAM.Options)
-		d.Set("scope", retNetwork.Scope)
+		_ = d.Set("name", retNetwork.Name)
+		_ = d.Set("labels", mapToLabelSet(retNetwork.Labels))
+		_ = d.Set("driver", retNetwork.Driver)
+		_ = d.Set("internal", retNetwork.Internal)
+		_ = d.Set("attachable", retNetwork.Attachable)
+		_ = d.Set("ingress", retNetwork.Ingress)
+		_ = d.Set("ipv6", retNetwork.EnableIPv6)
+		_ = d.Set("ipam_driver", retNetwork.IPAM.Driver)
+		_ = d.Set("ipam_options", retNetwork.IPAM.Options)
+		_ = d.Set("scope", retNetwork.Scope)
 		if retNetwork.Scope == "overlay" {
 			if len(retNetwork.Options) != 0 {
-				d.Set("options", retNetwork.Options)
+				_ = d.Set("options", retNetwork.Options)
 			} else {
 				log.Printf("[DEBUG] options: %v not exposed", retNetwork.Options)
 				return networkID, "pending", nil
 			}
 		} else {
-			d.Set("options", retNetwork.Options)
+			_ = d.Set("options", retNetwork.Options)
 		}
 
 		if err = d.Set("ipam_config", flattenIpamConfigSpec(retNetwork.IPAM.Config)); err != nil {

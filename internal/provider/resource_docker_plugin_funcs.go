@@ -15,7 +15,7 @@ import (
 )
 
 func resourceDockerPluginCreate(d *schema.ResourceData, meta any) error {
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 	ctx := context.Background()
 	pluginName := d.Get("name").(string)
 	alias := d.Get("alias").(string)
@@ -30,7 +30,7 @@ func resourceDockerPluginCreate(d *schema.ResourceData, meta any) error {
 	if v, ok := d.GetOk("grant_permissions"); ok {
 		opts.AcceptPermissionsFunc = getDockerPluginGrantPermissions(v)
 	}
-	body, err := client.PluginInstall(ctx, alias, opts)
+	body, err := cli.PluginInstall(ctx, alias, opts)
 	if err != nil {
 		return fmt.Errorf("install a Docker plugin "+pluginName+": %w", err)
 	}
@@ -39,7 +39,7 @@ func resourceDockerPluginCreate(d *schema.ResourceData, meta any) error {
 	if alias != "" {
 		key = alias
 	}
-	plugin, _, err := client.PluginInspectWithRaw(ctx, key)
+	plugin, _, err := cli.PluginInspectWithRaw(ctx, key)
 	if err != nil {
 		return fmt.Errorf("inspect a Docker plugin "+key+": %w", err)
 	}
@@ -48,10 +48,10 @@ func resourceDockerPluginCreate(d *schema.ResourceData, meta any) error {
 }
 
 func resourceDockerPluginRead(d *schema.ResourceData, meta any) error {
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 	ctx := context.Background()
 	pluginID := d.Id()
-	plugin, _, err := client.PluginInspectWithRaw(ctx, pluginID)
+	plugin, _, err := cli.PluginInspectWithRaw(ctx, pluginID)
 	if err != nil {
 		log.Printf("[DEBUG] Inspect a Docker plugin "+pluginID+": %w", err)
 		d.SetId("")
@@ -66,11 +66,11 @@ func resourceDockerPluginRead(d *schema.ResourceData, meta any) error {
 }
 
 func resourceDockerPluginDelete(d *schema.ResourceData, meta any) error {
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 	ctx := context.Background()
 	pluginID := d.Id()
 	log.Printf("[DEBUG] Remove a Docker plugin %s", pluginID)
-	if err := client.PluginRemove(ctx, pluginID, types.PluginRemoveOptions{
+	if err := cli.PluginRemove(ctx, pluginID, types.PluginRemoveOptions{
 		Force: d.Get("force_destroy").(bool),
 	}); err != nil {
 		return fmt.Errorf("remove the Docker plugin "+pluginID+": %w", err)
@@ -78,7 +78,7 @@ func resourceDockerPluginDelete(d *schema.ResourceData, meta any) error {
 	return nil
 }
 
-// Helpers
+// Helpers.
 func getDockerPluginEnv(src any) []string {
 	if src == nil {
 		return nil
@@ -110,7 +110,7 @@ func normalizePluginName(name string) (string, error) {
 	return complementTag(ref.String()), nil
 }
 
-func diffSuppressFuncPluginName(k, oldV, newV string, d *schema.ResourceData) bool {
+func diffSuppressFuncPluginName(_, oldV, newV string, _ *schema.ResourceData) bool {
 	o, err := normalizePluginName(oldV)
 	if err != nil {
 		return false
@@ -142,7 +142,7 @@ func getDockerPluginGrantPermissions(src any) func(context.Context, types.Plugin
 		}
 		grantPermissions[name] = grantPermission
 	}
-	return func(ctx context.Context, privileges types.PluginPrivileges) (bool, error) {
+	return func(_ context.Context, privileges types.PluginPrivileges) (bool, error) {
 		for _, privilege := range privileges {
 			grantPermission, nameOK := grantPermissions[privilege.Name]
 			if !nameOK {
@@ -162,16 +162,16 @@ func getDockerPluginGrantPermissions(src any) func(context.Context, types.Plugin
 
 func setDockerPlugin(d *schema.ResourceData, plugin *types.Plugin) {
 	d.SetId(plugin.ID)
-	d.Set("plugin_reference", plugin.PluginReference)
-	d.Set("alias", plugin.Name)
-	d.Set("name", plugin.PluginReference)
-	d.Set("enabled", plugin.Enabled)
+	_ = d.Set("plugin_reference", plugin.PluginReference)
+	_ = d.Set("alias", plugin.Name)
+	_ = d.Set("name", plugin.PluginReference)
+	_ = d.Set("enabled", plugin.Enabled)
 	// TODO suzuki-shunsuke support other settings
 	// https://docs.docker.com/engine/reference/commandline/plugin_set/#extended-description
 	// source of mounts .Settings.Mounts
 	// path of devices .Settings.Devices
 	// args .Settings.Args
-	d.Set("env", plugin.Settings.Env)
+	_ = d.Set("env", plugin.Settings.Env)
 }
 
 func disablePlugin(ctx context.Context, d *schema.ResourceData, cl *client.Client) error {

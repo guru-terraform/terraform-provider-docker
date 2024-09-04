@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	b64 "encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,7 +19,9 @@ import (
 
 func dataSourceDockerRegistryImage() *schema.Resource {
 	return &schema.Resource{
-		Description: "Reads the image metadata from a Docker Registry. Used in conjunction with the [docker_image](../resources/image.md) resource to keep an image up to date on the latest available version of the tag.",
+		Description: "Reads the image metadata from a Docker Registry. " +
+			"Used in conjunction with the [docker_image](../resources/image.md) resource to keep an " +
+			"image up to date on the latest available version of the tag.",
 
 		ReadContext: dataSourceDockerRegistryImageRead,
 
@@ -36,16 +39,17 @@ func dataSourceDockerRegistryImage() *schema.Resource {
 			},
 
 			"insecure_skip_verify": {
-				Type:        schema.TypeBool,
-				Description: "If `true`, the verification of TLS certificates of the server/registry is disabled. Defaults to `false`",
-				Optional:    true,
-				Default:     false,
+				Type: schema.TypeBool,
+				Description: "If `true`, the verification of TLS certificates of the server/registry is disabled. " +
+					"Defaults to `false`",
+				Optional: true,
+				Default:  false,
 			},
 		},
 	}
 }
 
-func dataSourceDockerRegistryImageRead(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
+func dataSourceDockerRegistryImageRead(_ context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	pullOpts := parseImageOptions(d.Get("name").(string))
 
 	authConfig, err := getAuthConfigForRegistry(pullOpts.Registry, meta.(*ProviderConfig))
@@ -59,30 +63,37 @@ func dataSourceDockerRegistryImageRead(ctx context.Context, d *schema.ResourceDa
 	}
 
 	insecureSkipVerify := d.Get("insecure_skip_verify").(bool)
-	digest, err := getImageDigest(pullOpts.Registry, authConfig.ServerAddress, pullOpts.Repository, pullOpts.Tag, authConfig.Username, authConfig.Password, insecureSkipVerify, false)
+	digest, err := getImageDigest(pullOpts.Registry, authConfig.ServerAddress, pullOpts.Repository, pullOpts.Tag,
+		authConfig.Username, authConfig.Password, insecureSkipVerify, false)
 	if err != nil {
-		digest, err = getImageDigest(pullOpts.Registry, authConfig.ServerAddress, pullOpts.Repository, pullOpts.Tag, authConfig.Username, authConfig.Password, insecureSkipVerify, true)
+		digest, err = getImageDigest(pullOpts.Registry, authConfig.ServerAddress, pullOpts.Repository, pullOpts.Tag,
+			authConfig.Username, authConfig.Password, insecureSkipVerify, true)
 		if err != nil {
-			return diag.Errorf("Got error when attempting to fetch image version %s:%s from registry: %s", pullOpts.Repository, pullOpts.Tag, err)
+			return diag.Errorf("Got error when attempting to fetch image version %s:%s from registry: %s",
+				pullOpts.Repository, pullOpts.Tag, err)
 		}
 	}
 
 	d.SetId(digest)
-	d.Set("sha256_digest", digest)
+	_ = d.Set("sha256_digest", digest)
 
 	return nil
 }
 
-func getImageDigest(registry string, registryWithProtocol string, image, tag, username, password string, insecureSkipVerify, fallback bool) (string, error) {
+func getImageDigest(registry string, registryWithProtocol string, image, tag, username, password string,
+	insecureSkipVerify, fallback bool) (string, error) {
 	client := buildHttpClientForRegistry(registryWithProtocol, insecureSkipVerify)
 
-	req, err := http.NewRequest("HEAD", registryWithProtocol+"/v2/"+image+"/manifests/"+tag, nil)
+	ctx := context.TODO()
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead,
+		registryWithProtocol+"/v2/"+image+"/manifests/"+tag, nil)
 	if err != nil {
-		return "", fmt.Errorf("Error creating registry request: %s", err)
+		return "", fmt.Errorf("error creating registry request: %s", err.Error())
 	}
 
 	if username != "" {
-		if registry != "ghcr.io" && !isECRRepositoryURL(registry) && !isAzureCRRepositoryURL(registry) && registry != "gcr.io" {
+		if registry != "ghcr.io" && !isECRRepositoryURL(registry) &&
+			!isAzureCRRepositoryURL(registry) && registry != "gcr.io" {
 			req.SetBasicAuth(username, password)
 		} else {
 			if isECRRepositoryURL(registry) {
@@ -96,11 +107,13 @@ func getImageDigest(registry string, registryWithProtocol string, image, tag, us
 
 	setupHTTPHeadersForRegistryRequests(req, fallback)
 
+	defer req.Body.Close()
 	resp, err := client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("Error during registry request: %s", err)
+		return "", fmt.Errorf("error during registry request: %s", err.Error())
 	}
 
+	defer resp.Body.Close()
 	switch resp.StatusCode {
 	// Basic auth was valid or not needed
 	case http.StatusOK:
@@ -109,10 +122,11 @@ func getImageDigest(registry string, registryWithProtocol string, image, tag, us
 	// Either OAuth is required or the basic auth creds were invalid
 	case http.StatusUnauthorized:
 		if !strings.HasPrefix(resp.Header.Get("www-authenticate"), "Bearer") {
-			return "", fmt.Errorf("Bad credentials: %s", resp.Status)
+			return "", fmt.Errorf("bad credentials: %s", resp.Status)
 		}
 
-		token, err := getAuthToken(resp.Header.Get("www-authenticate"), username, password, client)
+		token, err := getAuthToken(resp.Header.Get("www-authenticate"),
+			username, password, client)
 		if err != nil {
 			return "", err
 		}
@@ -142,7 +156,7 @@ func getImageDigest(registry string, registryWithProtocol string, image, tag, us
 
 	// Some unexpected status was given, return an error
 	default:
-		return "", fmt.Errorf("Got bad response from registry: %s", resp.Status)
+		return "", fmt.Errorf("got bad response from registry: %s", resp.Status)
 	}
 }
 
@@ -151,7 +165,7 @@ type TokenResponse struct {
 	AccessToken string `json:"access_token"`
 }
 
-// Parses key/value pairs from a WWW-Authenticate header
+// Parses key/value pairs from a WWW-Authenticate header.
 func parseAuthHeader(header string) map[string]string {
 	parts := strings.SplitN(header, " ", 2)
 	parts = regexp.MustCompile(`\w+=".*?"|\w+[^\s"]+?`).FindAllString(parts[1], -1) // expression to match auth headers.
@@ -173,7 +187,7 @@ func getDigestFromResponse(response *http.Response) (string, error) {
 	if header == "" {
 		body, err := io.ReadAll(response.Body)
 		if err != nil || len(body) == 0 {
-			return "", fmt.Errorf("Error reading registry response body: %s", err)
+			return "", fmt.Errorf("error reading registry response body: %s", err.Error())
 		}
 
 		return fmt.Sprintf("sha256:%x", sha256.Sum256(body)), nil
@@ -187,33 +201,37 @@ func getAuthToken(authHeader string, username string, password string, client *h
 	params := url.Values{}
 	params.Set("service", auth["service"])
 	params.Set("scope", auth["scope"])
-	tokenRequest, err := http.NewRequest("GET", auth["realm"]+"?"+params.Encode(), nil)
+	ctx := context.TODO()
+	tokenRequest, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		auth["realm"]+"?"+params.Encode(), nil)
 	if err != nil {
-		return "", fmt.Errorf("Error creating registry request: %s", err)
+		return "", fmt.Errorf("error creating registry request: %s", err.Error())
 	}
 
 	if username != "" {
 		tokenRequest.SetBasicAuth(username, password)
 	}
 
+	defer tokenRequest.Body.Close()
 	tokenResponse, err := client.Do(tokenRequest)
 	if err != nil {
-		return "", fmt.Errorf("Error during registry request: %s", err)
+		return "", fmt.Errorf("error during registry request: %s", err.Error())
 	}
 
+	defer tokenRequest.Body.Close()
 	if tokenResponse.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("Got bad response from registry: %s", tokenResponse.Status)
+		return "", fmt.Errorf("got bad response from registry: %s", tokenResponse.Status)
 	}
 
 	body, err := io.ReadAll(tokenResponse.Body)
 	if err != nil {
-		return "", fmt.Errorf("Error reading response body: %s", err)
+		return "", fmt.Errorf("error reading response body: %s", err.Error())
 	}
 
 	token := &TokenResponse{}
 	err = json.Unmarshal(body, token)
 	if err != nil {
-		return "", fmt.Errorf("Error parsing OAuth token response: %s", err)
+		return "", fmt.Errorf("error parsing OAuth token response: %s", err.Error())
 	}
 
 	if token.Token != "" {
@@ -224,17 +242,17 @@ func getAuthToken(authHeader string, username string, password string, client *h
 		return token.AccessToken, nil
 	}
 
-	return "", fmt.Errorf("Error unsupported OAuth response")
+	return "", errors.New("error unsupported OAuth response")
 }
 
 func doDigestRequest(req *http.Request, client *http.Client) (*http.Response, error) {
 	digestResponse, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("error during registry request: %s", err)
+		return nil, fmt.Errorf("error during registry request: %s", err.Error())
 	}
 
 	if digestResponse.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Got bad response from registry: %s", digestResponse.Status)
+		return nil, fmt.Errorf("got bad response from registry: %s", digestResponse.Status)
 	}
 
 	return digestResponse, nil

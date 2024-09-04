@@ -6,13 +6,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/docker/docker/api/types/registry"
 	"io"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/docker/docker/api/types/registry"
 
 	"github.com/docker/cli/cli/command/image/build"
 	"github.com/docker/docker/api/types"
@@ -37,9 +38,9 @@ func resourceDockerImageCreate(ctx context.Context, d *schema.ResourceData, meta
 
 	if value, ok := d.GetOk("build"); ok {
 		for _, rawBuild := range value.(*schema.Set).List() {
-			rawBuild := rawBuild.(map[string]any)
+			sRawBuild := rawBuild.(map[string]any)
 
-			err := buildDockerImage(ctx, rawBuild, imageName, cli)
+			err := buildDockerImage(ctx, sRawBuild, imageName, cli)
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -80,8 +81,8 @@ func resourceDockerImageRead(ctx context.Context, d *schema.ResourceData, meta a
 
 	// TODO mavogel: remove the appended name from the ID
 	d.SetId(foundImage.ID + d.Get("name").(string))
-	d.Set("image_id", foundImage.ID)
-	d.Set("repo_digest", repoDigest)
+	_ = d.Set("image_id", foundImage.ID)
+	_ = d.Set("repo_digest", repoDigest)
 	return nil
 }
 
@@ -109,7 +110,7 @@ func resourceDockerImageDelete(ctx context.Context, d *schema.ResourceData, meta
 	return nil
 }
 
-// Helpers
+// Helpers.
 func searchLocalImages(ctx context.Context, client *client.Client, data Data, imageName string) (*image.Summary, error) {
 	imageInspect, _, err := client.ImageInspectWithRaw(ctx, imageName)
 	if err != nil {
@@ -145,7 +146,7 @@ func removeImage(ctx context.Context, d *schema.ResourceData, client *client.Cli
 
 	imageName := d.Get("name").(string)
 	if imageName == "" {
-		return fmt.Errorf("empty image name is not allowed")
+		return errors.New("empty image name is not allowed")
 	}
 
 	foundImage, err := searchLocalImages(ctx, client, data, imageName)
@@ -194,7 +195,7 @@ func fetchLocalImages(ctx context.Context, data *Data, client *client.Client) er
 	return nil
 }
 
-func pullImage(ctx context.Context, data *Data, client *client.Client, authConfig *AuthConfigs, img string, platform string) error {
+func pullImage(ctx context.Context, _ *Data, client *client.Client, authConfig *AuthConfigs, img string, platform string) error {
 	pullOpts := parseImageOptions(img)
 
 	auth := registry.AuthConfig{}
@@ -204,7 +205,7 @@ func pullImage(ctx context.Context, data *Data, client *client.Client, authConfi
 
 	encodedJSON, err := json.Marshal(auth)
 	if err != nil {
-		return fmt.Errorf("error creating auth config: %w", err)
+		return fmt.Errorf("error creating auth config: %s", err.Error())
 	}
 
 	out, err := client.ImagePull(ctx, img, image.PullOptions{
@@ -212,7 +213,7 @@ func pullImage(ctx context.Context, data *Data, client *client.Client, authConfi
 		Platform:     platform,
 	})
 	if err != nil {
-		return fmt.Errorf("error pulling image %s: %w", img, err)
+		return fmt.Errorf("error pulling image %s: %s", img, err.Error())
 	}
 	defer out.Close()
 
@@ -238,7 +239,7 @@ type internalPullImageOptions struct {
 
 // Parses an image name into a PullImageOptions struct.
 // If the name has no registry, the registry-1.docker.io is used
-// If the name has no tag, the tag "latest" is used
+// If the name has no tag, the tag "latest" is used.
 func parseImageOptions(image string) internalPullImageOptions {
 	pullOpts := internalPullImageOptions{}
 
@@ -282,9 +283,10 @@ func parseImageOptions(image string) internalPullImageOptions {
 	return pullOpts
 }
 
-func findImage(ctx context.Context, imageName string, client *client.Client, authConfig *AuthConfigs, platform string) (*image.Summary, error) {
+func findImage(ctx context.Context, imageName string, client *client.Client,
+	authConfig *AuthConfigs, platform string) (*image.Summary, error) {
 	if imageName == "" {
-		return nil, fmt.Errorf("empty image name is not allowed")
+		return nil, errors.New("empty image name is not allowed")
 	}
 
 	var data Data
@@ -294,13 +296,13 @@ func findImage(ctx context.Context, imageName string, client *client.Client, aut
 	}
 	foundImage, err := searchLocalImages(ctx, client, data, imageName)
 	if err != nil {
-		return nil, fmt.Errorf("findImage1: error looking up local image %q: %w", imageName, err)
+		return nil, fmt.Errorf("findImage1: error looking up local image %q: %s", imageName, err.Error())
 	}
 	if foundImage != nil {
 		return foundImage, nil
 	}
 	if err := pullImage(ctx, &data, client, authConfig, imageName, platform); err != nil {
-		return nil, fmt.Errorf("unable to pull image %s: %s", imageName, err)
+		return nil, fmt.Errorf("unable to pull image %s: %s", imageName, err.Error())
 	}
 
 	// update the data structure of the images
@@ -366,8 +368,13 @@ func enableBuildKitIfSupported(ctx context.Context, client *client.Client, build
 		dialSession := func(ctx context.Context, proto string, meta map[string][]string) (net.Conn, error) {
 			return client.DialHijack(ctx, "/session", proto, meta)
 		}
-		//nolint
-		go s.Run(ctx, dialSession)
+
+		go func() {
+			err := s.Run(ctx, dialSession)
+			if err != nil {
+				fmt.Printf("Error running session: %s", err.Error())
+			}
+		}()
 		defer s.Close()
 		buildOptions.SessionID = s.ID()
 		buildOptions.Version = types.BuilderBuildKit
@@ -391,7 +398,7 @@ func prepareBuildContext(specifiedContext string, specifiedDockerfile string) (i
 		log.Printf("[DEBUG] Dockerfile is outside of build-context")
 		dockerfileCtx, err = os.Open(specifiedDockerfile)
 		if err != nil {
-			return nil, "", errors.Errorf("unable to open Dockerfile: %v", err)
+			return nil, "", errors.Errorf("unable to open Dockerfile: %v", err.Error())
 		}
 		defer dockerfileCtx.Close()
 	}
@@ -419,7 +426,7 @@ func prepareBuildContext(specifiedContext string, specifiedDockerfile string) (i
 
 func getBuildContext(filePath string, excludes []string) io.ReadCloser {
 	filePath, _ = homedir.Expand(filePath)
-	//TarWithOptions works only with absolute paths in Windows.
+	// TarWithOptions works only with absolute paths in Windows.
 	filePath, err := filepath.Abs(filePath)
 	if err != nil {
 		log.Fatalf("Invalid build directory: %s", filePath)
@@ -439,7 +446,7 @@ func decodeBuildMessages(response types.ImageBuildResponse) (string, error) {
 		var m jsonmessage.JSONMessage
 		err := dec.Decode(&m)
 		if err != nil {
-			return buf.String(), fmt.Errorf("problem decoding message from docker daemon: %s", err)
+			return buf.String(), fmt.Errorf("problem decoding message from docker daemon: %s", err.Error())
 		}
 
 		if err := m.Display(buf, false); err != nil {
@@ -447,7 +454,7 @@ func decodeBuildMessages(response types.ImageBuildResponse) (string, error) {
 		}
 
 		if m.Error != nil {
-			buildErr = fmt.Errorf("unable to build image")
+			buildErr = errors.New("unable to build image")
 		}
 	}
 	log.Printf("[DEBUG] %s", buf.String())

@@ -23,9 +23,11 @@ func dataSourceDockerImage() *schema.Resource {
 				Required:    true,
 			},
 			"repo_digest": {
-				Type:        schema.TypeString,
-				Description: "The image sha256 digest in the form of `repo[:tag]@sha256:<hash>`. It may be empty in the edge case where the local image was pulled from a repo, tagged locally, and then referred to in the data source by that local name/tag.",
-				Computed:    true,
+				Type: schema.TypeString,
+				Description: "The image sha256 digest in the form of `repo[:tag]@sha256:<hash>`. " +
+					"It may be empty in the edge case where the local image was pulled from a repo, tagged locally, " +
+					"and then referred to in the data source by that local name/tag.",
+				Computed: true,
 			},
 		},
 	}
@@ -55,15 +57,15 @@ func dataSourceDockerImageRead(ctx context.Context, d *schema.ResourceData, meta
 	repoDigest := determineRepoDigest(imageName, foundImage)
 
 	d.SetId(foundImage.ID)
-	d.Set("name", imageName)
-	d.Set("repo_digest", repoDigest)
+	_ = d.Set("name", imageName)
+	_ = d.Set("repo_digest", repoDigest)
 
 	return nil
 }
 
 // determineRepoDigest determines the repo digest for a local image name.
 // It will always return a digest and if none was found it returns an empty string.
-// See https://github.com/guru-terraform/terraform-provider-docker/pull/212#discussion_r646025706 for details
+// See https://github.com/guru-terraform/terraform-provider-docker/pull/212#discussion_r646025706 for details.
 func determineRepoDigest(imageName string, imageToQuery *image.Summary) string {
 	// the edge case where the local image was pulled from a repo, tagged locally,
 	// and then referred to in the data source by that local name/tag...
@@ -99,6 +101,7 @@ func determineRepoDigest(imageName string, imageToQuery *image.Summary) string {
 
 	// another edge case where the image was pulled from somewhere, pushed somewhere else,
 	// but the tag being referenced in the data is that local-only tag
-	log.Printf("[WARN] could not determine repo digest for image name '%s' and repo digests: %v. Will fall back to '%s'", imageName, imageToQuery.RepoDigests, imageToQuery.RepoDigests[0])
+	log.Printf("[WARN] could not determine repo digest for image name '%s' and repo digests: %v. "+
+		"Will fall back to '%s'", imageName, imageToQuery.RepoDigests, imageToQuery.RepoDigests[0])
 	return imageToQuery.RepoDigests[0]
 }

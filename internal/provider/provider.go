@@ -33,7 +33,7 @@ func init() {
 	// }
 }
 
-// New creates the Docker provider
+// New creates the Docker provider.
 func New(version string) func() *schema.Provider {
 	return func() *schema.Provider {
 		p := &schema.Provider{
@@ -214,12 +214,12 @@ func configure(version string, p *schema.Provider) func(context.Context, *schema
 }
 
 // AuthConfigs represents authentication options to use for the
-// PushImage method accommodating the new X-Registry-Config header
+// PushImage method accommodating the new X-Registry-Config header.
 type AuthConfigs struct {
 	Configs map[string]registry.AuthConfig `json:"configs"`
 }
 
-// Take the given registry_auth schemas and return a map of registry auth configurations
+// Take the given registry_auth schemas and return a map of registry auth configurations.
 func providerSetToRegistryAuth(authList *schema.Set) (*AuthConfigs, error) {
 	authConfigs := AuthConfigs{
 		Configs: make(map[string]registry.AuthConfig),

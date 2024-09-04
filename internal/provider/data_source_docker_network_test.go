@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"fmt"
+	"errors"
 	"strconv"
 	"testing"
 
@@ -32,7 +32,7 @@ func TestAccDockerNetworkDataSource_basic(t *testing.T) {
 func testAccDockerNetworkDataSourceIPAMRead(state *terraform.State) error {
 	bridge := state.RootModule().Resources["data.docker_network.bridge"]
 	if bridge == nil {
-		return fmt.Errorf("unable to find data.docker_network.bridge")
+		return errors.New("unable to find data.docker_network.bridge")
 	}
 	attr := bridge.Primary.Attributes["ipam_config.#"]
 	numberOfReadConfig, err := strconv.Atoi(attr)
@@ -40,7 +40,7 @@ func testAccDockerNetworkDataSourceIPAMRead(state *terraform.State) error {
 		return err
 	}
 	if numberOfReadConfig < 1 {
-		return fmt.Errorf("unable to find any ipam_config")
+		return errors.New("unable to find any ipam_config")
 	}
 	return nil
 }

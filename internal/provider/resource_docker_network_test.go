@@ -2,9 +2,11 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"github.com/docker/docker/api/types/network"
 	"testing"
+
+	"github.com/docker/docker/api/types/network"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -39,15 +41,15 @@ func TestAccDockerNetwork_full(t *testing.T) {
 
 	testCheckNetworkInspect := func(*terraform.State) error {
 		if n.Scope == "" || n.Scope != "local" {
-			return fmt.Errorf("Network Scope is wrong: %v", n.Scope)
+			return fmt.Errorf("network Scope is wrong: %v", n.Scope)
 		}
 
 		if n.Driver == "" || n.Driver != "bridge" {
-			return fmt.Errorf("Network Driver is wrong: %v", n.Driver)
+			return fmt.Errorf("network Driver is wrong: %v", n.Driver)
 		}
 
 		if n.EnableIPv6 != false {
-			return fmt.Errorf("Network EnableIPv6 is wrong: %v", n.EnableIPv6)
+			return fmt.Errorf("network EnableIPv6 is wrong: %v", n.EnableIPv6)
 		}
 
 		if n.IPAM.Driver == "" ||
@@ -58,42 +60,42 @@ func TestAccDockerNetwork_full(t *testing.T) {
 			n.IPAM.Config[0].AuxAddress != nil ||
 			n.IPAM.Config[0].Subnet != "10.0.1.0/24" ||
 			n.IPAM.Driver != "default" {
-			return fmt.Errorf("Network IPAM is wrong: %v", n.IPAM)
+			return fmt.Errorf("network IPAM is wrong: %v", n.IPAM)
 		}
 
 		if n.Internal != true {
-			return fmt.Errorf("Network Internal is wrong: %v", n.Internal)
+			return fmt.Errorf("network Internal is wrong: %v", n.Internal)
 		}
 
 		if n.Attachable != false {
-			return fmt.Errorf("Network Attachable is wrong: %v", n.Attachable)
+			return fmt.Errorf("network Attachable is wrong: %v", n.Attachable)
 		}
 
 		if n.Ingress != false {
-			return fmt.Errorf("Network Ingress is wrong: %v", n.Ingress)
+			return fmt.Errorf("network Ingress is wrong: %v", n.Ingress)
 		}
 
 		if n.ConfigFrom.Network != "" {
-			return fmt.Errorf("Network ConfigFrom is wrong: %v", n.ConfigFrom)
+			return fmt.Errorf("network ConfigFrom is wrong: %v", n.ConfigFrom)
 		}
 
 		if n.ConfigOnly != false {
-			return fmt.Errorf("Network ConfigOnly is wrong: %v", n.ConfigOnly)
+			return fmt.Errorf("network ConfigOnly is wrong: %v", n.ConfigOnly)
 		}
 
 		if n.Containers == nil || len(n.Containers) != 0 {
-			return fmt.Errorf("Network Containers is wrong: %v", n.Containers)
+			return fmt.Errorf("network Containers is wrong: %v", n.Containers)
 		}
 
 		if n.Options == nil || len(n.Options) != 0 {
-			return fmt.Errorf("Network Options is wrong: %v", n.Options)
+			return fmt.Errorf("network Options is wrong: %v", n.Options)
 		}
 
 		if n.Labels == nil ||
 			len(n.Labels) != 2 ||
 			!mapEquals("com.docker.compose.network", "foo", n.Labels) ||
 			!mapEquals("com.docker.compose.project", "test", n.Labels) {
-			return fmt.Errorf("Network Labels is wrong: %v", n.Labels)
+			return fmt.Errorf("network Labels is wrong: %v", n.Labels)
 		}
 
 		return nil
@@ -126,11 +128,11 @@ func testAccNetwork(n string, netw *network.Inspect) resource.TestCheckFunc {
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
@@ -143,14 +145,14 @@ func testAccNetwork(n string, netw *network.Inspect) resource.TestCheckFunc {
 			if n.ID == rs.Primary.ID {
 				inspected, err := client.NetworkInspect(ctx, n.ID, network.InspectOptions{})
 				if err != nil {
-					return fmt.Errorf("Network could not be obtained: %s", err)
+					return fmt.Errorf("network could not be obtained: %s", err)
 				}
 				*netw = inspected
 				return nil
 			}
 		}
 
-		return fmt.Errorf("Network not found: %s", rs.Primary.ID)
+		return fmt.Errorf("network not found: %s", rs.Primary.ID)
 	}
 }
 
@@ -179,9 +181,9 @@ func TestAccDockerNetwork_internal(t *testing.T) {
 }
 
 func testAccNetworkInternal(network *network.Inspect, internal bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
+	return func(_ *terraform.State) error {
 		if network.Internal != internal {
-			return fmt.Errorf("Bad value for attribute 'internal': %t", network.Internal)
+			return fmt.Errorf("bad value for attribute 'internal': %t", network.Internal)
 		}
 		return nil
 	}
@@ -212,9 +214,9 @@ func TestAccDockerNetwork_attachable(t *testing.T) {
 }
 
 func testAccNetworkAttachable(network *network.Inspect, attachable bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
+	return func(_ *terraform.State) error {
 		if network.Attachable != attachable {
-			return fmt.Errorf("Bad value for attribute 'attachable': %t", network.Attachable)
+			return fmt.Errorf("bad value for attribute 'attachable': %t", network.Attachable)
 		}
 		return nil
 	}
@@ -241,7 +243,7 @@ func TestAccDockerNetwork_ingress(t *testing.T) {
 				),
 			},
 		},
-		CheckDestroy: func(state *terraform.State) error {
+		CheckDestroy: func(_ *terraform.State) error {
 			// we leave the swarm because in the next testAccPreCheck
 			// the node will join the swarm again
 			// and so recreate the default swarm ingress network
@@ -272,8 +274,7 @@ func removeSwarmIngressNetwork(ctx context.Context, t *testing.T) {
 func nodeLeaveSwarm(ctx context.Context, t *testing.T) error {
 	client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 
-	force := true
-	err := client.SwarmLeave(ctx, force)
+	err := client.SwarmLeave(ctx, true)
 	if err != nil {
 		t.Errorf("node failed to leave the swarm: %v", err)
 	}
@@ -281,9 +282,9 @@ func nodeLeaveSwarm(ctx context.Context, t *testing.T) error {
 }
 
 func testAccNetworkIngress(network *network.Inspect, ingress bool) resource.TestCheckFunc {
-	return func(s *terraform.State) error {
+	return func(_ *terraform.State) error {
 		if network.Ingress != ingress {
-			return fmt.Errorf("Bad value for attribute 'ingress': %t", network.Ingress)
+			return fmt.Errorf("bad value for attribute 'ingress': %t", network.Ingress)
 		}
 		return nil
 	}
@@ -313,13 +314,13 @@ func TestAccDockerNetwork_ipv4(t *testing.T) {
 	})
 }
 
-func testAccNetworkIPv4(network *network.Inspect, internal bool) resource.TestCheckFunc {
+func testAccNetworkIPv4(network *network.Inspect, _ bool) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		if len(network.IPAM.Config) != 1 {
-			return fmt.Errorf("Bad value for IPAM configuration count: %d", len(network.IPAM.Config))
+			return fmt.Errorf("bad value for IPAM configuration count: %d", len(network.IPAM.Config))
 		}
 		if network.IPAM.Config[0].Subnet != "10.0.1.0/24" {
-			return fmt.Errorf("Bad value for attribute 'subnet': %v", network.IPAM.Config[0].Subnet)
+			return fmt.Errorf("bad value for attribute 'subnet': %v", network.IPAM.Config[0].Subnet)
 		}
 		return nil
 	}
@@ -352,16 +353,16 @@ func TestAccDockerNetwork_ipv6(t *testing.T) {
 	})
 }
 
-func testAccNetworkIPv6(network *network.Inspect, internal bool) resource.TestCheckFunc { //nolint:unused
-	return func(s *terraform.State) error {
+func testAccNetworkIPv6(network *network.Inspect, _ bool) resource.TestCheckFunc {
+	return func(_ *terraform.State) error {
 		if !network.EnableIPv6 {
-			return fmt.Errorf("Bad value for attribute 'ipv6': %t", network.EnableIPv6)
+			return fmt.Errorf("bad value for attribute 'ipv6': %t", network.EnableIPv6)
 		}
 		if len(network.IPAM.Config) != 2 {
-			return fmt.Errorf("Bad value for IPAM configuration count: %d", len(network.IPAM.Config))
+			return fmt.Errorf("bad value for IPAM configuration count: %d", len(network.IPAM.Config))
 		}
 		if network.IPAM.Config[1].Subnet != "fd00::1/64" {
-			return fmt.Errorf("Bad value for attribute 'subnet': %v", network.IPAM.Config[1].Subnet)
+			return fmt.Errorf("bad value for attribute 'subnet': %v", network.IPAM.Config[1].Subnet)
 		}
 		return nil
 	}

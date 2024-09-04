@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,13 +16,15 @@ import (
 func TestAccDockerRegistryImageResource_build_insecure_registry(t *testing.T) {
 	pushOptions := createPushImageOptions("127.0.0.1:15001/tftest-dockerregistryimage:1.0")
 	wd, _ := os.Getwd()
-	context := strings.ReplaceAll((filepath.Join(wd, "..", "..", "scripts", "testing", "docker_registry_image_context")), "\\", "\\\\")
+	context := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing", "docker_registry_image_context"),
+		"\\", "\\\\")
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_registry_image", "testBuildDockerRegistryImageNoKeepConfig"), "http://127.0.0.1:15001", pushOptions.Name, context),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_registry_image",
+					"testBuildDockerRegistryImageNoKeepConfig"), "http://127.0.0.1:15001", pushOptions.Name, context),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("docker_registry_image.foo", "sha256_digest"),
 				),
@@ -34,14 +37,16 @@ func TestAccDockerRegistryImageResource_build_insecure_registry(t *testing.T) {
 func TestAccDockerRegistryImageResource_buildAndKeep(t *testing.T) {
 	pushOptions := createPushImageOptions("127.0.0.1:15000/tftest-dockerregistryimage:1.0")
 	wd, _ := os.Getwd()
-	context := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing", "docker_registry_image_context"), "\\", "\\\\")
+	context := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing", "docker_registry_image_context"),
+		"\\", "\\\\")
 
 	resource.Test(t, resource.TestCase{
 		PreCheck:          func() { testAccPreCheck(t) },
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_registry_image", "testBuildDockerRegistryImageKeepConfig"), pushOptions.Registry, pushOptions.Name, context),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_registry_image",
+					"testBuildDockerRegistryImageKeepConfig"), pushOptions.Registry, pushOptions.Name, context),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttrSet("docker_registry_image.foo", "sha256_digest"),
 				),
@@ -59,7 +64,8 @@ func TestAccDockerRegistryImageResource_pushMissingImage(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config:      loadTestConfiguration(t, RESOURCE, "docker_registry_image", "testDockerRegistryImagePushMissingConfig"),
+				Config: loadTestConfiguration(t, RESOURCE, "docker_registry_image",
+					"testDockerRegistryImagePushMissingConfig"),
 				ExpectError: regexp.MustCompile("An image does not exist locally"),
 			},
 		},
@@ -72,7 +78,7 @@ func testDockerRegistryImageNotInRegistry(pushOpts internalPushImageOptions) res
 		authConfig, _ := getAuthConfigForRegistry(pushOpts.Registry, providerConfig)
 		digest, _ := getImageDigestWithFallback(pushOpts, normalizeRegistryAddress(pushOpts.Registry), authConfig.Username, authConfig.Password, true)
 		if digest != "" {
-			return fmt.Errorf("image found")
+			return errors.New("image found")
 		}
 		return nil
 	}
@@ -85,9 +91,9 @@ func testDockerRegistryImageInRegistry(username, password string, pushOpts inter
 			return fmt.Errorf("image '%s' with credentials('%s' - '%s') not found: %w", pushOpts.Name, username, password, err)
 		}
 		if cleanup {
-			err := deleteDockerRegistryImage(pushOpts, normalizeRegistryAddress(pushOpts.Registry), digest, username, password, true, false)
+			err = deleteDockerRegistryImage(pushOpts, normalizeRegistryAddress(pushOpts.Registry), digest, username, password, true, false)
 			if err != nil {
-				return fmt.Errorf("Unable to remove test image '%s': %w", pushOpts.Name, err)
+				return fmt.Errorf("unable to remove test image '%s': %w", pushOpts.Name, err)
 			}
 		}
 		return nil

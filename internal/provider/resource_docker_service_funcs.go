@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/docker/docker/api/types/registry"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 	"log"
 	"strings"
 	"time"
+
+	"github.com/docker/docker/api/types/registry"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -28,7 +30,7 @@ type convergeConfig struct {
 
 // ///////////////
 // TF CRUD funcs
-// ///////////////
+// ///////////////.
 func resourceDockerServiceCreate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
 	var err error
 	client := meta.(*ProviderConfig).DockerClient
@@ -103,10 +105,10 @@ func resourceDockerServiceRead(ctx context.Context, d *schema.ResourceData, meta
 func resourceDockerServiceReadRefreshFunc(ctx context.Context,
 	d *schema.ResourceData, meta any) retry.StateRefreshFunc {
 	return func() (any, string, error) {
-		client := meta.(*ProviderConfig).DockerClient
+		cli := meta.(*ProviderConfig).DockerClient
 		serviceID := d.Id()
 
-		apiService, err := fetchDockerService(ctx, serviceID, d.Get("name").(string), client)
+		apiService, err := fetchDockerService(ctx, serviceID, d.Get("name").(string), cli)
 		if err != nil {
 			return nil, "", err
 		}
@@ -115,9 +117,9 @@ func resourceDockerServiceReadRefreshFunc(ctx context.Context,
 			d.SetId("")
 			return serviceID, "removed", nil
 		}
-		service, _, err := client.ServiceInspectWithRaw(ctx, apiService.ID, types.ServiceInspectOptions{})
+		service, _, err := cli.ServiceInspectWithRaw(ctx, apiService.ID, types.ServiceInspectOptions{})
 		if err != nil {
-			return serviceID, "", fmt.Errorf("Error inspecting service %s: %s", apiService.ID, err)
+			return serviceID, "", fmt.Errorf("error inspecting service %s: %s", apiService.ID, err)
 		}
 
 		jsonObj, _ := json.MarshalIndent(service, "", "\t")
@@ -129,8 +131,8 @@ func resourceDockerServiceReadRefreshFunc(ctx context.Context,
 		}
 
 		d.SetId(service.ID)
-		d.Set("name", service.Spec.Name)
-		d.Set("labels", mapToLabelSet(service.Spec.Labels))
+		_ = d.Set("name", service.Spec.Name)
+		_ = d.Set("labels", mapToLabelSet(service.Spec.Labels))
 
 		if err = d.Set("task_spec", flattenTaskSpec(service.Spec.TaskTemplate, d)); err != nil {
 			log.Printf("[WARN] failed to set task spec from API: %s", err)
@@ -138,7 +140,7 @@ func resourceDockerServiceReadRefreshFunc(ctx context.Context,
 		if err = d.Set("mode", flattenServiceMode(service.Spec.Mode)); err != nil {
 			log.Printf("[WARN] failed to set mode from API: %s", err)
 		}
-		if err := d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig)); err != nil {
+		if err = d.Set("update_config", flattenServiceUpdateOrRollbackConfig(service.Spec.UpdateConfig)); err != nil {
 			log.Printf("[WARN] failed to set update_config from API: %s", err)
 		}
 		if err = d.Set("rollback_config", flattenServiceUpdateOrRollbackConfig(service.Spec.RollbackConfig)); err != nil {
@@ -154,7 +156,7 @@ func resourceDockerServiceReadRefreshFunc(ctx context.Context,
 				log.Printf("[WARN] failed to set endpoint spec from API: %s", err)
 			}
 		} else {
-			return serviceID, "", fmt.Errorf("Error no endpoint spec for service %s", apiService.ID)
+			return serviceID, "", fmt.Errorf("error no endpoint spec for service %s", apiService.ID)
 		}
 
 		return serviceID, "all_fields", nil
@@ -162,9 +164,9 @@ func resourceDockerServiceReadRefreshFunc(ctx context.Context,
 }
 
 func resourceDockerServiceUpdate(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 
-	service, _, err := client.ServiceInspectWithRaw(ctx, d.Id(), types.ServiceInspectOptions{})
+	service, _, err := cli.ServiceInspectWithRaw(ctx, d.Id(), types.ServiceInspectOptions{})
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -181,7 +183,7 @@ func resourceDockerServiceUpdate(ctx context.Context, d *schema.ResourceData, me
 	}
 	updateOptions.EncodedRegistryAuth = base64.URLEncoding.EncodeToString(marshalledAuth)
 
-	updateResponse, err := client.ServiceUpdate(ctx, d.Id(), service.Version, serviceSpec, updateOptions)
+	updateResponse, err := cli.ServiceUpdate(ctx, d.Id(), service.Version, serviceSpec, updateOptions)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -217,9 +219,9 @@ func resourceDockerServiceUpdate(ctx context.Context, d *schema.ResourceData, me
 }
 
 func resourceDockerServiceDelete(ctx context.Context, d *schema.ResourceData, meta any) diag.Diagnostics {
-	client := meta.(*ProviderConfig).DockerClient
+	cli := meta.(*ProviderConfig).DockerClient
 
-	if err := deleteService(ctx, d.Id(), d, client); err != nil {
+	if err := deleteService(ctx, d.Id(), d, cli); err != nil {
 		return diag.FromErr(err)
 	}
 
@@ -230,11 +232,11 @@ func resourceDockerServiceDelete(ctx context.Context, d *schema.ResourceData, me
 // ///////////////
 // Helpers
 // ///////////////
-// fetchDockerService fetches a service by its name or id
+// fetchDockerService fetches a service by its name or id.
 func fetchDockerService(ctx context.Context, ID string, name string, client *client.Client) (*swarm.Service, error) {
 	apiServices, err := client.ServiceList(ctx, types.ServiceListOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("Error fetching service information from Docker: %s", err)
+		return nil, fmt.Errorf("error fetching service information from Docker: %s", err)
 	}
 
 	for _, apiService := range apiServices {
@@ -246,15 +248,15 @@ func fetchDockerService(ctx context.Context, ID string, name string, client *cli
 	return nil, nil
 }
 
-// deleteService deletes the service with the given id
+// deleteService deletes the service with the given id.
 func deleteService(ctx context.Context, serviceID string, d *schema.ResourceData, client *client.Client) error {
 	// get containerIDs of the running service because they do not exist after the service is deleted
-	serviceContainerIds := make([]string, 0)
+	serviceContainerIDs := make([]string, 0)
 	if v, ok := d.GetOk("task_spec.0.container_spec.0.stop_grace_period"); ok && v.(string) != "0s" {
-		filters := filters.NewArgs()
-		filters.Add("service", d.Get("name").(string))
+		filts := filters.NewArgs()
+		filts.Add("service", d.Get("name").(string))
 		tasks, err := client.TaskList(ctx, types.TaskListOptions{
-			Filters: filters,
+			Filters: filts,
 		})
 		if err != nil {
 			return err
@@ -267,7 +269,7 @@ func deleteService(ctx context.Context, serviceID string, d *schema.ResourceData
 			}
 			log.Printf("[INFO] Found container with ID ['%s'] in state '%s' for destroying", containerID, task.Status.State)
 			if strings.TrimSpace(containerID) != "" && task.Status.State != swarm.TaskStateShutdown {
-				serviceContainerIds = append(serviceContainerIds, containerID)
+				serviceContainerIDs = append(serviceContainerIDs, containerID)
 			}
 		}
 	}
@@ -275,12 +277,12 @@ func deleteService(ctx context.Context, serviceID string, d *schema.ResourceData
 	// delete the service
 	log.Printf("[INFO] Deleting service with ID: '%s'", serviceID)
 	if err := client.ServiceRemove(ctx, serviceID); err != nil {
-		return fmt.Errorf("Error deleting service with ID '%s': %s", serviceID, err)
+		return fmt.Errorf("error deleting service with ID '%s': %s", serviceID, err)
 	}
 
 	// destroy each container after a grace period if specified
 	if v, ok := d.GetOk("task_spec.0.container_spec.0.stop_grace_period"); ok && v.(string) != "0s" {
-		for _, containerID := range serviceContainerIds {
+		for _, containerID := range serviceContainerIDs {
 			destroyGraceTime, _ := time.ParseDuration(v.(string))
 			log.Printf("[INFO] Waiting for container with ID: '%s' to exit: max %v", containerID, destroyGraceTime)
 			ctx, cancel := context.WithTimeout(ctx, destroyGraceTime)
@@ -294,7 +296,8 @@ func deleteService(ctx context.Context, serviceID string, d *schema.ResourceData
 					// We ignore those types of errors because the container might be already removed before
 					// the containerWait returns
 					if !(containsIgnorableErrorMessage(containerWaitResult.Error.Message, "No such container")) {
-						return fmt.Errorf("failed to wait for container with ID '%s': '%v'", containerID, containerWaitResult.Error.Message)
+						return fmt.Errorf("failed to wait for container with ID '%s': '%v'",
+							containerID, containerWaitResult.Error.Message)
 					}
 				}
 				log.Printf("[INFO] Container with ID '%s' exited with code '%v'", containerID, containerWaitResult.StatusCode)
@@ -302,7 +305,7 @@ func deleteService(ctx context.Context, serviceID string, d *schema.ResourceData
 				// We ignore those types of errors because the container might be already removed before
 				// the containerWait returns
 				if !(containsIgnorableErrorMessage(containerWaitErrResult.Error(), "No such container")) {
-					return fmt.Errorf("error on wait for container with ID '%s': %v", containerID, containerWaitErrResult)
+					return fmt.Errorf("error on wait for container with ID '%s': %v", containerID, containerWaitErrResult.Error())
 				}
 			}
 
@@ -316,7 +319,7 @@ func deleteService(ctx context.Context, serviceID string, d *schema.ResourceData
 				// We ignore those types of errors because the container might be already removed of the removal is in progress
 				// before the containerRemove call happens
 				if !containsIgnorableErrorMessage(err.Error(), "No such container", "is already in progress") {
-					return fmt.Errorf("Error deleting container with ID '%s': %s", containerID, err)
+					return fmt.Errorf("error deleting container with ID '%s': %s", containerID, err.Error())
 				}
 			}
 		}
@@ -328,14 +331,14 @@ func deleteService(ctx context.Context, serviceID string, d *schema.ResourceData
 //////// Convergers
 
 // DidNotConvergeError is the error returned when a the service does not converge in
-// the defined time
+// the defined time.
 type DidNotConvergeError struct {
 	ServiceID string
 	Timeout   time.Duration
 	Err       error
 }
 
-// Error the custom error if a service does not converge
+// Error the custom error if a service does not converge.
 func (err *DidNotConvergeError) Error() string {
 	if err.Err != nil {
 		return err.Err.Error()
@@ -343,11 +346,11 @@ func (err *DidNotConvergeError) Error() string {
 	return "Service with ID (" + err.ServiceID + ") did not converge after " + err.Timeout.String()
 }
 
-// resourceDockerServiceCreateRefreshFunc refreshes the state of a service when it is created and needs to converge
+// resourceDockerServiceCreateRefreshFunc refreshes the state of a service when it is created and needs to converge.
 func resourceDockerServiceCreateRefreshFunc(ctx context.Context,
 	serviceID string, meta any) retry.StateRefreshFunc {
 	return func() (any, string, error) {
-		client := meta.(*ProviderConfig).DockerClient
+		cli := meta.(*ProviderConfig).DockerClient
 
 		var updater progressUpdater
 
@@ -355,17 +358,17 @@ func resourceDockerServiceCreateRefreshFunc(ctx context.Context,
 			updater = &replicatedConsoleLogUpdater{}
 		}
 
-		filters := filters.NewArgs()
-		filters.Add("service", serviceID)
-		filters.Add("desired-state", "running")
+		filts := filters.NewArgs()
+		filts.Add("service", serviceID)
+		filts.Add("desired-state", "running")
 
 		getUpToDateTasks := func() ([]swarm.Task, error) {
-			return client.TaskList(ctx, types.TaskListOptions{
-				Filters: filters,
+			return cli.TaskList(ctx, types.TaskListOptions{
+				Filters: filts,
 			})
 		}
 
-		service, _, err := client.ServiceInspectWithRaw(ctx, serviceID, types.ServiceInspectOptions{})
+		service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID, types.ServiceInspectOptions{})
 		if err != nil {
 			return nil, "", err
 		}
@@ -375,7 +378,7 @@ func resourceDockerServiceCreateRefreshFunc(ctx context.Context,
 			return nil, "", err
 		}
 
-		activeNodes, err := getActiveNodes(ctx, client)
+		activeNodes, err := getActiveNodes(ctx, cli)
 		if err != nil {
 			return nil, "", err
 		}
@@ -393,11 +396,11 @@ func resourceDockerServiceCreateRefreshFunc(ctx context.Context,
 	}
 }
 
-// resourceDockerServiceUpdateRefreshFunc refreshes the state of a service when it is updated and needs to converge
+// resourceDockerServiceUpdateRefreshFunc refreshes the state of a service when it is updated and needs to converge.
 func resourceDockerServiceUpdateRefreshFunc(ctx context.Context,
 	serviceID string, meta any) retry.StateRefreshFunc {
 	return func() (any, string, error) {
-		client := meta.(*ProviderConfig).DockerClient
+		cli := meta.(*ProviderConfig).DockerClient
 
 		var (
 			updater  progressUpdater
@@ -409,17 +412,17 @@ func resourceDockerServiceUpdateRefreshFunc(ctx context.Context,
 		}
 		rollback = false
 
-		filters := filters.NewArgs()
-		filters.Add("service", serviceID)
-		filters.Add("desired-state", "running")
+		filts := filters.NewArgs()
+		filts.Add("service", serviceID)
+		filts.Add("desired-state", "running")
 
 		getUpToDateTasks := func() ([]swarm.Task, error) {
-			return client.TaskList(ctx, types.TaskListOptions{
-				Filters: filters,
+			return cli.TaskList(ctx, types.TaskListOptions{
+				Filters: filts,
 			})
 		}
 
-		service, _, err := client.ServiceInspectWithRaw(ctx, serviceID, types.ServiceInspectOptions{})
+		service, _, err := cli.ServiceInspectWithRaw(ctx, serviceID, types.ServiceInspectOptions{})
 		if err != nil {
 			return nil, "", err
 		}
@@ -447,7 +450,7 @@ func resourceDockerServiceUpdateRefreshFunc(ctx context.Context,
 			return nil, "", err
 		}
 
-		activeNodes, err := getActiveNodes(ctx, client)
+		activeNodes, err := getActiveNodes(ctx, cli)
 		if err != nil {
 			return nil, "", err
 		}
@@ -468,7 +471,7 @@ func resourceDockerServiceUpdateRefreshFunc(ctx context.Context,
 	}
 }
 
-// getActiveNodes gets the actives nodes withon a swarm
+// getActiveNodes gets the actives nodes withon a swarm.
 func getActiveNodes(ctx context.Context, client *client.Client) (map[string]struct{}, error) {
 	nodes, err := client.NodeList(ctx, types.NodeListOptions{})
 	if err != nil {
@@ -484,12 +487,12 @@ func getActiveNodes(ctx context.Context, client *client.Client) (map[string]stru
 	return activeNodes, nil
 }
 
-// progressUpdater interface for progressive task updates
+// progressUpdater interface for progressive task updates.
 type progressUpdater interface {
 	update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error)
 }
 
-// replicatedConsoleLogUpdater console log updater for replicated services
+// replicatedConsoleLogUpdater console log updater for replicated services.
 type replicatedConsoleLogUpdater struct {
 	// used for mapping slots to a contiguous space
 	// this also causes progress bars to appear in order
@@ -499,10 +502,11 @@ type replicatedConsoleLogUpdater struct {
 	done        bool
 }
 
-// update is the concrete implementation of updating replicated services
-func (u *replicatedConsoleLogUpdater) update(service *swarm.Service, tasks []swarm.Task, activeNodes map[string]struct{}, rollback bool) (bool, error) {
+// update is the concrete implementation of updating replicated services.
+func (u *replicatedConsoleLogUpdater) update(service *swarm.Service, tasks []swarm.Task,
+	activeNodes map[string]struct{}, rollback bool) (bool, error) {
 	if service.Spec.Mode.Replicated == nil || service.Spec.Mode.Replicated.Replicas == nil {
-		return false, fmt.Errorf("no replica count")
+		return false, errors.New("no replica count")
 	}
 	replicas := *service.Spec.Mode.Replicated.Replicas
 
@@ -554,7 +558,8 @@ func (u *replicatedConsoleLogUpdater) update(service *swarm.Service, tasks []swa
 
 // tasksBySlot maps the tasks to slots on active nodes. There can be multiple slots on active nodes.
 // A task is analogous to a “slot” where (on a node) the scheduler places a container.
-func (u *replicatedConsoleLogUpdater) tasksBySlot(tasks []swarm.Task, activeNodes map[string]struct{}) map[int]swarm.Task {
+func (u *replicatedConsoleLogUpdater) tasksBySlot(tasks []swarm.Task,
+	activeNodes map[string]struct{}) map[int]swarm.Task {
 	// if there are multiple tasks with the same slot number, favor the one
 	// with the *lowest* desired state. This can happen in restart
 	// scenarios.
@@ -588,19 +593,20 @@ func (u *replicatedConsoleLogUpdater) tasksBySlot(tasks []swarm.Task, activeNode
 }
 
 // terminalState determines if the given state is a terminal state
-// meaninig 'higher' than running (see numberedStates)
+// meaninig 'higher' than running (see numberedStates).
 func terminalState(state swarm.TaskState) bool {
 	return numberedStates[state] > numberedStates[swarm.TaskStateRunning]
 }
 
-// authToServiceAuth maps the auth to AuthConfiguration
+// authToServiceAuth maps the auth to AuthConfiguration.
 func authToServiceAuth(auths []any) registry.AuthConfig {
 	if len(auths) == 0 {
 		return registry.AuthConfig{}
 	}
 	// it's maxItems = 1
 	auth := auths[0].(map[string]any)
-	if auth["username"] != nil && len(auth["username"].(string)) > 0 && auth["password"] != nil && len(auth["password"].(string)) > 0 {
+	if auth["username"] != nil && len(auth["username"].(string)) > 0 &&
+		auth["password"] != nil && len(auth["password"].(string)) > 0 {
 		return registry.AuthConfig{
 			Username:      auth["username"].(string),
 			Password:      auth["password"].(string),
@@ -611,7 +617,7 @@ func authToServiceAuth(auths []any) registry.AuthConfig {
 	return registry.AuthConfig{}
 }
 
-// fromRegistryAuth extract the desired AuthConfiguration for the given image
+// fromRegistryAuth extract the desired AuthConfiguration for the given image.
 func fromRegistryAuth(image string, authConfigs map[string]registry.AuthConfig) registry.AuthConfig {
 	// Remove normalized prefixes to simplify substring
 	// DevSkim: ignore DS137138
@@ -629,8 +635,8 @@ func fromRegistryAuth(image string, authConfigs map[string]registry.AuthConfig) 
 	return registry.AuthConfig{}
 }
 
-// retrieveAndMarshalAuth retrieves and marshals the service registry auth
-func retrieveAndMarshalAuth(d *schema.ResourceData, meta any, stageType string) []byte {
+// retrieveAndMarshalAuth retrieves and marshals the service registry auth.
+func retrieveAndMarshalAuth(d *schema.ResourceData, meta any, _ string) []byte {
 	var auth registry.AuthConfig
 	// when a service is updated/set for the first time the auth is set but empty
 	// this is why we need this additional check
@@ -650,7 +656,7 @@ func retrieveAndMarshalAuth(d *schema.ResourceData, meta any, stageType string) 
 //////// States
 
 // numberedStates are ascending sorted states for docker tasks
-// meaning they appear internally in this order in the statemachine
+// meaning they appear internally in this order in the statemachine.
 var (
 	numberedStates = map[swarm.TaskState]int64{
 		swarm.TaskStateNew:       1,
@@ -672,7 +678,7 @@ var (
 	}
 )
 
-// serviceCreatePendingStates are the pending states for the creation of a service
+// serviceCreatePendingStates are the pending states for the creation of a service.
 var serviceCreatePendingStates = []string{
 	"new",
 	"allocated",
@@ -686,7 +692,7 @@ var serviceCreatePendingStates = []string{
 	"paused",
 }
 
-// serviceUpdatePendingStates are the pending states for the update of a service
+// serviceUpdatePendingStates are the pending states for the update of a service.
 var serviceUpdatePendingStates = []string{
 	"creating",
 	"updating",

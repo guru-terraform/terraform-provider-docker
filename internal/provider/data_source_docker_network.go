@@ -109,11 +109,11 @@ func dataSourceDockerNetworkRead(ctx context.Context, d *schema.ResourceData, me
 	}
 
 	d.SetId(network.ID)
-	d.Set("name", network.Name)
-	d.Set("scope", network.Scope)
-	d.Set("driver", network.Driver)
-	d.Set("options", network.Options)
-	d.Set("internal", network.Internal)
+	_ = d.Set("name", network.Name)
+	_ = d.Set("scope", network.Scope)
+	_ = d.Set("driver", network.Driver)
+	_ = d.Set("options", network.Options)
+	_ = d.Set("internal", network.Internal)
 	if err = d.Set("ipam_config", flattenIpamConfig(network.IPAM.Config)); err != nil {
 		log.Printf("[WARN] failed to set ipam config from API: %s", err)
 	}

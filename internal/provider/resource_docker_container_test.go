@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -36,7 +37,8 @@ func TestAccDockerContainer_private_image(t *testing.T) {
 	registry := "127.0.0.1:15000"
 	image := "127.0.0.1:15000/tftest-service:v1"
 	wd, _ := os.Getwd()
-	dockerConfig := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing", "dockerconfig.json"), "\\", "\\\\")
+	dockerConfig := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing", "dockerconfig.json"),
+		"\\", "\\\\")
 	ctx := context.Background()
 
 	var c types.ContainerJSON
@@ -45,7 +47,8 @@ func TestAccDockerContainer_private_image(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_container", "testAccDockerContainerPrivateImage"), registry, dockerConfig, image),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_container",
+					"testAccDockerContainerPrivateImage"), registry, dockerConfig, image),
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 				),
@@ -211,7 +214,7 @@ func TestAccDockerContainer_volume(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if len(c.Mounts) != 1 {
-			return fmt.Errorf("Incorrect number of mounts: expected 1, got %d", len(c.Mounts))
+			return fmt.Errorf("incorrect number of mounts: expected 1, got %d", len(c.Mounts))
 		}
 
 		for _, v := range c.Mounts {
@@ -220,17 +223,17 @@ func TestAccDockerContainer_volume(t *testing.T) {
 			}
 
 			if v.Destination != "/tmp/volume" {
-				return fmt.Errorf("Bad destination on mount: expected /tmp/volume, got %q", v.Destination)
+				return fmt.Errorf("bad destination on mount: expected /tmp/volume, got %q", v.Destination)
 			}
 
 			if v.Mode != "rw" {
-				return fmt.Errorf("Bad mode on mount: expected rw, got %q", v.Mode)
+				return fmt.Errorf("bad mode on mount: expected rw, got %q", v.Mode)
 			}
 
 			return nil
 		}
 
-		return fmt.Errorf("Mount for testAccDockerContainerVolume_volume not found")
+		return errors.New("mount for testAccDockerContainerVolume_volume not found")
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -253,12 +256,12 @@ func TestAccDockerContainer_mounts(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if len(c.Mounts) != 2 {
-			return fmt.Errorf("Incorrect number of mounts: expected 2, got %d", len(c.Mounts))
+			return fmt.Errorf("incorrect number of mounts: expected 2, got %d", len(c.Mounts))
 		}
 
 		for _, v := range c.Mounts {
 			if v.Destination != "/mount/test" && v.Destination != "/mount/tmpfs" {
-				return fmt.Errorf("Bad destination on mount: expected /mount/test or /mount/tmpfs, got %q", v.Destination)
+				return fmt.Errorf("bad destination on mount: expected /mount/test or /mount/tmpfs, got %q", v.Destination)
 			}
 		}
 
@@ -285,12 +288,12 @@ func TestAccDockerContainer_tmpfs(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if len(c.HostConfig.Tmpfs) != 1 {
-			return fmt.Errorf("Incorrect number of tmpfs: expected 1, got %d", len(c.HostConfig.Tmpfs))
+			return fmt.Errorf("incorrect number of tmpfs: expected 1, got %d", len(c.HostConfig.Tmpfs))
 		}
 
 		for mountPath := range c.HostConfig.Tmpfs {
 			if mountPath != "/mount/tmpfs" {
-				return fmt.Errorf("Bad destination on tmpfs: expected /mount/tmpfs, got %q", mountPath)
+				return fmt.Errorf("bad destination on tmpfs: expected /mount/tmpfs, got %q", mountPath)
 			}
 		}
 
@@ -317,15 +320,15 @@ func TestAccDockerContainer_sysctls(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if len(c.HostConfig.Sysctls) != 1 {
-			return fmt.Errorf("Incorrect number of sysctls: expected 1, got %d", len(c.HostConfig.Sysctls))
+			return fmt.Errorf("incorrect number of sysctls: expected 1, got %d", len(c.HostConfig.Sysctls))
 		}
 
 		if ctl, ok := c.HostConfig.Sysctls["net.ipv4.ip_forward"]; ok {
 			if ctl != "1" {
-				return fmt.Errorf("Bad value for sysctl net.ipv4.ip_forward: expected 1, got %s", ctl)
+				return fmt.Errorf("bad value for sysctl net.ipv4.ip_forward: expected 1, got %s", ctl)
 			}
 		} else {
-			return fmt.Errorf("net.ipv4.ip_forward not found in Sysctls")
+			return errors.New("net.ipv4.ip_forward not found in Sysctls")
 		}
 
 		return nil
@@ -351,7 +354,7 @@ func TestAccDockerContainer_groupadd_id(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if len(c.HostConfig.GroupAdd) != 1 || c.HostConfig.GroupAdd[0] != "100" {
-			return fmt.Errorf("Wrong group add: %s", c.HostConfig.GroupAdd)
+			return fmt.Errorf("wrong group add: %s", c.HostConfig.GroupAdd)
 		}
 		return nil
 	}
@@ -376,7 +379,7 @@ func TestAccDockerContainer_groupadd_name(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if len(c.HostConfig.GroupAdd) != 1 || c.HostConfig.GroupAdd[0] != "users" {
-			return fmt.Errorf("Wrong group add: %s", c.HostConfig.GroupAdd)
+			return fmt.Errorf("wrong group add: %s", c.HostConfig.GroupAdd)
 		}
 		return nil
 	}
@@ -401,7 +404,7 @@ func TestAccDockerContainer_groupadd_multiple(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if len(c.HostConfig.GroupAdd) != 3 {
-			return fmt.Errorf("Wrong group add: %s", c.HostConfig.GroupAdd)
+			return fmt.Errorf("wrong group add: %s", c.HostConfig.GroupAdd)
 		}
 		return nil
 	}
@@ -426,7 +429,7 @@ func TestAccDockerContainer_tty(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if !c.Config.Tty {
-			return fmt.Errorf("Tty not enabled")
+			return errors.New("TTY not enabled")
 		}
 		return nil
 	}
@@ -451,7 +454,7 @@ func TestAccDockerContainer_STDIN_Enabled(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if !c.Config.OpenStdin {
-			return fmt.Errorf("STDIN not enabled")
+			return errors.New("STDIN not enabled")
 		}
 		return nil
 	}
@@ -479,161 +482,173 @@ func TestAccDockerContainer_customized(t *testing.T) {
 			(c.Config.Entrypoint[0] != "/bin/bash" &&
 				c.Config.Entrypoint[1] != "-c" &&
 				c.Config.Entrypoint[2] != "ping localhost") {
-			return fmt.Errorf("Container wrong entrypoint: %s", c.Config.Entrypoint)
+			return fmt.Errorf("container wrong entrypoint: %s", c.Config.Entrypoint)
 		}
 
 		if c.Config.User != "root:root" {
-			return fmt.Errorf("Container wrong user: %s", c.Config.User)
+			return fmt.Errorf("container wrong user: %s", c.Config.User)
 		}
 
 		if c.HostConfig.RestartPolicy.Name == "on-failure" {
 			if c.HostConfig.RestartPolicy.MaximumRetryCount != 5 {
-				return fmt.Errorf("Container has wrong restart policy max retry count: %d", c.HostConfig.RestartPolicy.MaximumRetryCount)
+				return fmt.Errorf("container has wrong restart policy max retry count: %d",
+					c.HostConfig.RestartPolicy.MaximumRetryCount)
 			}
 		} else {
-			return fmt.Errorf("Container has wrong restart policy: %s", c.HostConfig.RestartPolicy.Name)
+			return fmt.Errorf("container has wrong restart policy: %s", c.HostConfig.RestartPolicy.Name)
 		}
 
 		if c.HostConfig.Memory != (512 * 1024 * 1024) {
-			return fmt.Errorf("Container has wrong memory setting: %d", c.HostConfig.Memory)
+			return fmt.Errorf("container has wrong memory setting: %d", c.HostConfig.Memory)
 		}
 
 		if c.HostConfig.MemorySwap != (2048 * 1024 * 1024) {
-			return fmt.Errorf("Container has wrong memory swap setting: %d\n\r\tPlease check that you machine supports memory swap (you can do that by running 'docker info' command).", c.HostConfig.MemorySwap)
+			return fmt.Errorf("Container has wrong memory swap setting: "+
+				"%d\n\r\tPlease check that you machine supports memory swap (you can do that by running 'docker info' command).",
+				c.HostConfig.MemorySwap)
 		}
 
 		if c.HostConfig.ShmSize != (128 * 1024 * 1024) {
-			return fmt.Errorf("Container has wrong shared memory setting: %d", c.HostConfig.ShmSize)
+			return fmt.Errorf("container has wrong shared memory setting: %d", c.HostConfig.ShmSize)
 		}
 
 		if c.HostConfig.CPUShares != 32 {
-			return fmt.Errorf("Container has wrong cpu shares setting: %d", c.HostConfig.CPUShares)
+			return fmt.Errorf("container has wrong cpu shares setting: %d", c.HostConfig.CPUShares)
 		}
 
 		if c.HostConfig.CpusetCpus != "0-1" {
-			return fmt.Errorf("Container has wrong cpu set setting: %s", c.HostConfig.CpusetCpus)
+			return fmt.Errorf("container has wrong cpu set setting: %s", c.HostConfig.CpusetCpus)
 		}
 
 		if len(c.HostConfig.DNS) != 1 {
-			return fmt.Errorf("Container does not have the correct number of dns entries: %d", len(c.HostConfig.DNS))
+			return fmt.Errorf("container does not have the correct number of dns entries: %d",
+				len(c.HostConfig.DNS))
 		}
 
 		if c.HostConfig.DNS[0] != "8.8.8.8" {
-			return fmt.Errorf("Container has wrong dns setting: %v", c.HostConfig.DNS[0])
+			return fmt.Errorf("container has wrong dns setting: %v", c.HostConfig.DNS[0])
 		}
 
 		if len(c.HostConfig.DNSOptions) != 1 {
-			return fmt.Errorf("Container does not have the correct number of dns option entries: %d", len(c.HostConfig.DNS))
+			return fmt.Errorf("container does not have the correct number of dns option entries: %d",
+				len(c.HostConfig.DNS))
 		}
 
 		if c.HostConfig.DNSOptions[0] != "rotate" {
-			return fmt.Errorf("Container has wrong dns option setting: %v", c.HostConfig.DNS[0])
+			return fmt.Errorf("container has wrong dns option setting: %v", c.HostConfig.DNS[0])
 		}
 
 		if len(c.HostConfig.DNSSearch) != 1 {
-			return fmt.Errorf("Container does not have the correct number of dns search entries: %d", len(c.HostConfig.DNS))
+			return fmt.Errorf("container does not have the correct number of dns search entries: %d",
+				len(c.HostConfig.DNS))
 		}
 
 		if c.HostConfig.DNSSearch[0] != "example.com" {
-			return fmt.Errorf("Container has wrong dns search setting: %v", c.HostConfig.DNS[0])
+			return fmt.Errorf("container has wrong dns search setting: %v", c.HostConfig.DNS[0])
 		}
 
 		if len(c.HostConfig.CapAdd) != 1 {
-			return fmt.Errorf("Container does not have the correct number of Capabilities in ADD: %d", len(c.HostConfig.CapAdd))
+			return fmt.Errorf("container does not have the correct number of Capabilities in ADD: %d",
+				len(c.HostConfig.CapAdd))
 		}
 
 		if c.HostConfig.CapAdd[0] != "ALL" {
-			return fmt.Errorf("Container has wrong CapAdd setting: %v", c.HostConfig.CapAdd[0])
+			return fmt.Errorf("container has wrong CapAdd setting: %v", c.HostConfig.CapAdd[0])
 		}
 
 		if len(c.HostConfig.CapDrop) != 1 {
-			return fmt.Errorf("Container does not have the correct number of Capabilities in Drop: %d", len(c.HostConfig.CapDrop))
+			return fmt.Errorf("container does not have the correct number of Capabilities in Drop: %d",
+				len(c.HostConfig.CapDrop))
 		}
 
 		if c.HostConfig.CapDrop[0] != "SYS_ADMIN" {
-			return fmt.Errorf("Container has wrong CapDrop setting: %v", c.HostConfig.CapDrop[0])
+			return fmt.Errorf("container has wrong CapDrop setting: %v", c.HostConfig.CapDrop[0])
 		}
 
 		if c.HostConfig.CPUShares != 32 {
-			return fmt.Errorf("Container has wrong cpu shares setting: %d", c.HostConfig.CPUShares)
+			return fmt.Errorf("container has wrong cpu shares setting: %d", c.HostConfig.CPUShares)
 		}
 
 		if c.HostConfig.CPUShares != 32 {
-			return fmt.Errorf("Container has wrong cpu shares setting: %d", c.HostConfig.CPUShares)
+			return fmt.Errorf("container has wrong cpu shares setting: %d", c.HostConfig.CPUShares)
 		}
 
 		if c.Config.Labels["env"] != "prod" || c.Config.Labels["role"] != "test" {
-			return fmt.Errorf("Container does not have the correct labels")
+			return errors.New("container does not have the correct labels")
 		}
 
 		if c.HostConfig.LogConfig.Type != "json-file" {
-			return fmt.Errorf("Container does not have the correct log config: %s", c.HostConfig.LogConfig.Type)
+			return fmt.Errorf("container does not have the correct log config: %s",
+				c.HostConfig.LogConfig.Type)
 		}
 
 		if c.HostConfig.LogConfig.Config["max-size"] != "10m" {
-			return fmt.Errorf("Container does not have the correct max-size log option: %v", c.HostConfig.LogConfig.Config["max-size"])
+			return fmt.Errorf("container does not have the correct max-size log option: %v",
+				c.HostConfig.LogConfig.Config["max-size"])
 		}
 
 		if c.HostConfig.LogConfig.Config["max-file"] != "20" {
-			return fmt.Errorf("Container does not have the correct max-file log option: %v", c.HostConfig.LogConfig.Config["max-file"])
+			return fmt.Errorf("container does not have the correct max-file log option: %v",
+				c.HostConfig.LogConfig.Config["max-file"])
 		}
 
 		if len(c.HostConfig.ExtraHosts) != 2 {
-			return fmt.Errorf("Container does not have correct number of extra host entries, got %d", len(c.HostConfig.ExtraHosts))
+			return fmt.Errorf("container does not have correct number of extra host entries, got %d",
+				len(c.HostConfig.ExtraHosts))
 		}
 
 		if c.HostConfig.ExtraHosts[0] != "testhost:10.0.1.0" {
-			return fmt.Errorf("Container has incorrect extra host string at 0: %q", c.HostConfig.ExtraHosts[0])
+			return fmt.Errorf("container has incorrect extra host string at 0: %q", c.HostConfig.ExtraHosts[0])
 		}
 
 		if c.HostConfig.ExtraHosts[1] != "testhost2:10.0.2.0" {
-			return fmt.Errorf("Container has incorrect extra host string at 1: %q", c.HostConfig.ExtraHosts[1])
+			return fmt.Errorf("container has incorrect extra host string at 1: %q", c.HostConfig.ExtraHosts[1])
 		}
 
 		if _, ok := c.NetworkSettings.Networks["test"]; !ok {
-			return fmt.Errorf("Container is not connected to the right user defined network: test")
+			return errors.New("container is not connected to the right user defined network: test")
 		}
 
 		if len(c.HostConfig.Ulimits) != 2 {
-			return fmt.Errorf("Container doesn't have 2 ulimits")
+			return errors.New("container doesn't have 2 ulimits")
 		}
 
 		if c.HostConfig.Ulimits[1].Name != "nproc" {
-			return fmt.Errorf("Container doesn't have a nproc ulimit")
+			return errors.New("container doesn't have a nproc ulimit")
 		}
 
 		if c.HostConfig.Ulimits[1].Hard != 1024 {
-			return fmt.Errorf("Container doesn't have a correct nproc hard limit")
+			return errors.New("container doesn't have a correct nproc hard limit")
 		}
 
 		if c.HostConfig.Ulimits[1].Soft != 512 {
-			return fmt.Errorf("Container doesn't have a correct mem nproc limit")
+			return errors.New("container doesn't have a correct mem nproc limit")
 		}
 
 		if c.HostConfig.Ulimits[0].Name != "nofile" {
-			return fmt.Errorf("Container doesn't have a nofile ulimit")
+			return errors.New("container doesn't have a nofile ulimit")
 		}
 
 		if c.HostConfig.Ulimits[0].Hard != 262144 {
-			return fmt.Errorf("Container doesn't have a correct nofile hard limit")
+			return errors.New("container doesn't have a correct nofile hard limit")
 		}
 
 		if c.HostConfig.Ulimits[0].Soft != 200000 {
-			return fmt.Errorf("Container doesn't have a correct nofile soft limit")
+			return errors.New("container doesn't have a correct nofile soft limit")
 		}
 
 		if c.HostConfig.PidMode != "host" {
-			return fmt.Errorf("Container doesn't have a correct pid mode")
+			return errors.New("container doesn't have a correct pid mode")
 		}
 		if c.HostConfig.UsernsMode != "testuser:231072:65536" {
-			return fmt.Errorf("Container doesn't have a correct userns mode")
+			return errors.New("container doesn't have a correct userns mode")
 		}
 		if c.Config.WorkingDir != "/tmp" {
-			return fmt.Errorf("Container doesn't have a correct working dir")
+			return errors.New("container doesn't have a correct working dir")
 		}
 
 		if c.HostConfig.IpcMode != "private" {
-			return fmt.Errorf("Container doesn't have a correct ipc mode")
+			return errors.New("container doesn't have a correct ipc mode")
 		}
 
 		// Disabled for tests due to
@@ -655,7 +670,9 @@ func TestAccDockerContainer_customized(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 					testCheck,
-					testCheckLabelMap("docker_container.foo", "labels", map[string]string{"env": "prod", "role": "test", "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"}),
+					testCheckLabelMap("docker_container.foo", "labels",
+						map[string]string{"env": "prod", "role": "test",
+							"maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"}),
 				),
 			},
 		},
@@ -667,11 +684,11 @@ func testAccCheckSwapLimit(t *testing.T) {
 	client := testAccProvider.Meta().(*ProviderConfig).DockerClient
 	info, err := client.Info(ctx)
 	if err != nil {
-		t.Fatalf("Failed to check swap limit capability: %s", err)
+		t.Fatalf("failed to check swap limit capability: %s", err.Error())
 	}
 
 	if !info.SwapLimit {
-		t.Skip("Swap limit capability not available, skipping test")
+		t.Skip("swap limit capability not available, skipping test")
 	}
 }
 
@@ -685,27 +702,27 @@ func TestAccDockerContainer_upload(t *testing.T) {
 		srcPath := "/terraform/test.txt"
 		r, _, err := client.CopyFromContainer(ctx, c.ID, srcPath)
 		if err != nil {
-			return fmt.Errorf("Unable to download a file from container: %s", err)
+			return fmt.Errorf("unable to download a file from container: %s", err.Error())
 		}
 
 		tr := tar.NewReader(r)
 		if header, err := tr.Next(); err != nil {
-			return fmt.Errorf("Unable to read content of tar archive: %s", err)
+			return fmt.Errorf("unable to read content of tar archive: %s", err.Error())
 		} else {
 			mode := strconv.FormatInt(header.Mode, 8)
 			if !strings.HasSuffix(mode, "744") {
-				return fmt.Errorf("File permissions are incorrect: %s", mode)
+				return fmt.Errorf("file permissions are incorrect: %s", mode)
 			}
 		}
 
 		fbuf := new(bytes.Buffer)
-		if _, err := fbuf.ReadFrom(tr); err != nil {
+		if _, err = fbuf.ReadFrom(tr); err != nil {
 			return err
 		}
 		content := fbuf.String()
 
 		if content != "foo" {
-			return fmt.Errorf("file content is invalid")
+			return errors.New("file content is invalid")
 		}
 
 		return nil
@@ -746,42 +763,43 @@ func TestAccDockerContainer_uploadSource(t *testing.T) {
 		srcPath := "/terraform/test.txt"
 		r, _, err := client.CopyFromContainer(ctx, c.ID, srcPath)
 		if err != nil {
-			return fmt.Errorf("Unable to download a file from container: %s", err)
+			return fmt.Errorf("unable to download a file from container: %s", err.Error())
 		}
 
 		tr := tar.NewReader(r)
 		if header, err := tr.Next(); err != nil {
-			return fmt.Errorf("Unable to read content of tar archive: %s", err)
+			return fmt.Errorf("unable to read content of tar archive: %s", err.Error())
 		} else {
 			mode := strconv.FormatInt(header.Mode, 8)
 			if !strings.HasSuffix(mode, "744") {
-				return fmt.Errorf("File permissions are incorrect: %s", mode)
+				return fmt.Errorf("file permissions are incorrect: %s", mode)
 			}
 		}
 
 		fbuf := new(bytes.Buffer)
-		if _, err := fbuf.ReadFrom(tr); err != nil {
+		if _, err = fbuf.ReadFrom(tr); err != nil {
 			return err
 		}
 		content := fbuf.String()
 		if content != string(testFileContent) {
-			return fmt.Errorf("file content is invalid")
+			return errors.New("file content is invalid")
 		}
 
 		// we directly exec the container and print the creation timestamp
 		// which is easier to use the native docker sdk, by creating, running and attaching a reader to the command.
-		execReponse, err := exec.Command("docker", "exec", "-t", "tf-test", "find", "/terraform", "-maxdepth", "1", "-name", "test.txt", "-printf", "%CY-%Cm-%Cd").Output()
+		execReponse, err := exec.Command("docker", "exec", "-t", "tf-test", "find", "/terraform",
+			"-maxdepth", "1", "-name", "test.txt", "-printf", "%CY-%Cm-%Cd").Output()
 		if err != nil {
-			return fmt.Errorf("Unable to exec command: %s", err)
+			return fmt.Errorf("unable to exec command: %s", err.Error())
 		}
 
 		fileCreationTime, err := time.Parse("2006-01-02", string(execReponse))
 		if err != nil {
-			return fmt.Errorf("Unable to parse file creation time into format: %s", err)
+			return fmt.Errorf("unable to parse file creation time into format: %s", err.Error())
 		}
 
 		if fileCreationTime.IsZero() {
-			return fmt.Errorf("file creation time is zero: %s", err)
+			return fmt.Errorf("file creation time is zero: %s", err.Error())
 		}
 
 		return nil
@@ -792,7 +810,8 @@ func TestAccDockerContainer_uploadSource(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_container", "testAccDockerContainerUploadSourceConfig"), testFile),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_container",
+					"testAccDockerContainerUploadSourceConfig"), testFile),
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 					testCheck,
@@ -811,18 +830,18 @@ func TestAccDockerContainer_uploadSource(t *testing.T) {
 
 func TestAccDockerContainer_uploadSourceHash(t *testing.T) {
 	var c types.ContainerJSON
-	var firstRunId string
+	var firstRunID string
 
 	wd, _ := os.Getwd()
 	testFile := strings.ReplaceAll(filepath.Join(wd, "..", "..", "scripts", "testing", "testingFile"), "\\", "\\\\")
 	hash, _ := os.ReadFile(testFile + ".base64")
 	grabFirstCheck := func(*terraform.State) error {
-		firstRunId = c.ID
+		firstRunID = c.ID
 		return nil
 	}
 	testCheck := func(*terraform.State) error {
-		if c.ID == firstRunId {
-			return fmt.Errorf("Container should have been recreated due to changed hash")
+		if c.ID == firstRunID {
+			return errors.New("container should have been recreated due to changed hash")
 		}
 		return nil
 	}
@@ -832,7 +851,8 @@ func TestAccDockerContainer_uploadSourceHash(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_container", "testAccDockerContainerUploadSourceHashConfig"), testFile, string(hash)),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_container",
+					"testAccDockerContainerUploadSourceHashConfig"), testFile, string(hash)),
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 					grabFirstCheck,
@@ -841,7 +861,8 @@ func TestAccDockerContainer_uploadSourceHash(t *testing.T) {
 				),
 			},
 			{
-				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_container", "testAccDockerContainerUploadSourceHashConfig"), testFile, string(hash)+"arbitrary"),
+				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_container",
+					"testAccDockerContainerUploadSourceHashConfig"), testFile, string(hash)+"arbitrary"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 					testCheck,
@@ -863,21 +884,21 @@ func TestAccDockerContainer_uploadAsBase64(t *testing.T) {
 
 			r, _, err := client.CopyFromContainer(ctx, c.ID, srcPath)
 			if err != nil {
-				return fmt.Errorf("Unable to download a file from container: %s", err)
+				return fmt.Errorf("unable to download a file from container: %s", err.Error())
 			}
 
 			tr := tar.NewReader(r)
 			if header, err := tr.Next(); err != nil {
-				return fmt.Errorf("Unable to read content of tar archive: %s", err)
+				return fmt.Errorf("unable to read content of tar archive: %s", err.Error())
 			} else {
 				mode := strconv.FormatInt(header.Mode, 8)
 				if !strings.HasSuffix(mode, filePerm) {
-					return fmt.Errorf("File permissions are incorrect: %s; wanted: %s", mode, filePerm)
+					return fmt.Errorf("file permissions are incorrect: %s; wanted: %s", mode, filePerm)
 				}
 			}
 
 			fbuf := new(bytes.Buffer)
-			if _, err := fbuf.ReadFrom(tr); err != nil {
+			if _, err = fbuf.ReadFrom(tr); err != nil {
 				return err
 			}
 			gotContent := fbuf.String()
@@ -904,7 +925,8 @@ func TestAccDockerContainer_uploadAsBase64(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "2"),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content", ""),
-					resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64", "ODk0ZmMzZjU2ZWRmMmQzYTRjNWZiNWNiNzFkZjkxMGY5NThhMmVkOA=="),
+					resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64",
+						"ODk0ZmMzZjU2ZWRmMmQzYTRjNWZiNWNiNzFkZjkxMGY5NThhMmVkOA=="),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.0.executable", "true"),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.0.file", "/terraform/test1.txt"),
 					// TODO mavogel: should be content of the source be written to this attribute?
@@ -926,7 +948,8 @@ func TestAccDockerContainer_uploadAsBase64(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_container.foo", "name", "tf-test"),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.#", "2"),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content", ""),
-					resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64", "ODk0ZmMzZjU2ZWRmMmQzYTRjNWZiNWNiNzFkZjkxMGY5NThhMmVkOA=="),
+					resource.TestCheckResourceAttr("docker_container.foo", "upload.0.content_base64",
+						"ODk0ZmMzZjU2ZWRmMmQzYTRjNWZiNWNiNzFkZjkxMGY5NThhMmVkOA=="),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.0.executable", "true"),
 					resource.TestCheckResourceAttr("docker_container.foo", "upload.0.file", "/terraform/test1.txt"),
 					// TODO mavogel: should be content of the source be written to this attribute?
@@ -1011,39 +1034,39 @@ func TestAccDockerContainer_device(t *testing.T) {
 			Cmd: []string{"dd", "if=/dev/zero_test", "of=/tmp/test.txt", "count=10", "bs=1"},
 		}
 
-		exec, err := client.ContainerExecCreate(ctx, c.ID, createExecOpts)
+		ex, err := client.ContainerExecCreate(ctx, c.ID, createExecOpts)
 		if err != nil {
-			return fmt.Errorf("Unable to create a exec instance on container: %s", err)
+			return fmt.Errorf("unable to create a exec instance on container: %s", err.Error())
 		}
 
 		startExecOpts := container.ExecStartOptions{}
-		if err := client.ContainerExecStart(ctx, exec.ID, startExecOpts); err != nil {
-			return fmt.Errorf("Unable to run exec a instance on container: %s", err)
+		if err = client.ContainerExecStart(ctx, ex.ID, startExecOpts); err != nil {
+			return fmt.Errorf("unable to run exec a instance on container: %s", err.Error())
 		}
 
 		srcPath := "/tmp/test.txt"
 		out, _, err := client.CopyFromContainer(ctx, c.ID, srcPath)
 		if err != nil {
-			return fmt.Errorf("Unable to download a file from container: %s", err)
+			return fmt.Errorf("unable to download a file from container: %s", err)
 		}
 
 		tr := tar.NewReader(out)
-		if _, err := tr.Next(); err != nil {
-			return fmt.Errorf("Unable to read content of tar archive: %s", err)
+		if _, err = tr.Next(); err != nil {
+			return fmt.Errorf("unable to read content of tar archive: %s", err.Error())
 		}
 
 		fbuf := new(bytes.Buffer)
-		if _, err := fbuf.ReadFrom(tr); err != nil {
+		if _, err = fbuf.ReadFrom(tr); err != nil {
 			return err
 		}
 		content := fbuf.Bytes()
 
 		if len(content) != 10 {
-			return fmt.Errorf("Incorrect size of file: %d", len(content))
+			return fmt.Errorf("incorrect size of file: %d", len(content))
 		}
 		for _, value := range content {
 			if value != 0 {
-				return fmt.Errorf("Incorrect content in file: %v", content)
+				return fmt.Errorf("incorrect content in file: %v", content)
 			}
 		}
 
@@ -1072,20 +1095,20 @@ func TestAccDockerContainer_port_internal(t *testing.T) {
 		portMap := c.NetworkSettings.NetworkSettingsBase.Ports
 		portBindings, ok := portMap["80/tcp"]
 		if !ok || len(portMap["80/tcp"]) == 0 {
-			return fmt.Errorf("Port 80 on tcp is not set")
+			return errors.New("port 80 on tcp is not set")
 		}
 
 		portBindingsLength := len(portBindings)
 		if portBindingsLength != 1 {
-			return fmt.Errorf("Expected 1 binding on port 80, but was %d", portBindingsLength)
+			return fmt.Errorf("expected 1 binding on port 80, but was %d", portBindingsLength)
 		}
 
 		if len(portBindings[0].HostIP) == 0 {
-			return fmt.Errorf("Expected host IP to be set, but was empty")
+			return errors.New("expected host IP to be set, but was empty")
 		}
 
 		if len(portBindings[0].HostPort) == 0 {
-			return fmt.Errorf("Expected host port to be set, but was empty")
+			return errors.New("expected host port to be set, but was empty")
 		}
 
 		return nil
@@ -1119,38 +1142,38 @@ func TestAccDockerContainer_port_multiple_internal(t *testing.T) {
 		portMap := c.NetworkSettings.NetworkSettingsBase.Ports
 		portBindings, ok := portMap["80/tcp"]
 		if !ok || len(portMap["80/tcp"]) == 0 {
-			return fmt.Errorf("Port 80 on tcp is not set")
+			return errors.New("port 80 on tcp is not set")
 		}
 
 		portBindingsLength := len(portBindings)
 		if portBindingsLength != 1 {
-			return fmt.Errorf("Expected 1 binding on port 80, but was %d", portBindingsLength)
+			return fmt.Errorf("expected 1 binding on port 80, but was %d", portBindingsLength)
 		}
 
 		if len(portBindings[0].HostIP) == 0 {
-			return fmt.Errorf("Expected host IP to be set, but was empty")
+			return errors.New("expected host IP to be set, but was empty")
 		}
 
 		if len(portBindings[0].HostPort) == 0 {
-			return fmt.Errorf("Expected host port to be set, but was empty")
+			return errors.New("expected host port to be set, but was empty")
 		}
 
 		portBindings, ok = portMap["81/tcp"]
 		if !ok || len(portMap["81/tcp"]) == 0 {
-			return fmt.Errorf("Port 81 on tcp is not set")
+			return errors.New("port 81 on tcp is not set")
 		}
 
 		portBindingsLength = len(portBindings)
 		if portBindingsLength != 1 {
-			return fmt.Errorf("Expected 1 binding on port 81, but was %d", portBindingsLength)
+			return fmt.Errorf("expected 1 binding on port 81, but was %d", portBindingsLength)
 		}
 
 		if len(portBindings[0].HostIP) == 0 {
-			return fmt.Errorf("Expected host IP to be set, but was empty")
+			return errors.New("expected host IP to be set, but was empty")
 		}
 
 		if len(portBindings[0].HostPort) == 0 {
-			return fmt.Errorf("Expected host port to be set, but was empty")
+			return errors.New("expected host port to be set, but was empty")
 		}
 
 		return nil
@@ -1188,20 +1211,20 @@ func TestAccDockerContainer_port(t *testing.T) {
 		portMap := c.NetworkSettings.NetworkSettingsBase.Ports
 		portBindings, ok := portMap["80/tcp"]
 		if !ok || len(portMap["80/tcp"]) == 0 {
-			return fmt.Errorf("Port 80 on tcp is not set")
+			return errors.New("port 80 on tcp is not set")
 		}
 
 		portBindingsLength := len(portBindings)
 		if portBindingsLength != 1 {
-			return fmt.Errorf("Expected 1 binding on port 80, but was %d", portBindingsLength)
+			return fmt.Errorf("expected 1 binding on port 80, but was %d", portBindingsLength)
 		}
 
 		if len(portBindings[0].HostIP) == 0 {
-			return fmt.Errorf("Expected host IP to be set, but was empty")
+			return errors.New("expected host IP to be set, but was empty")
 		}
 
 		if len(portBindings[0].HostPort) == 0 {
-			return fmt.Errorf("Expected host port to be set, but was empty")
+			return errors.New("expected host port to be set, but was empty")
 		}
 
 		return nil
@@ -1243,38 +1266,38 @@ func TestAccDockerContainer_multiple_ports(t *testing.T) {
 		portMap := c.NetworkSettings.NetworkSettingsBase.Ports
 		portBindings, ok := portMap["80/tcp"]
 		if !ok || len(portMap["80/tcp"]) == 0 {
-			return fmt.Errorf("Port 80 on tcp is not set")
+			return errors.New("port 80 on tcp is not set")
 		}
 
 		portBindingsLength := len(portBindings)
 		if portBindingsLength != 1 {
-			return fmt.Errorf("Expected 1 binding on port 80, but was %d", portBindingsLength)
+			return fmt.Errorf("expected 1 binding on port 80, but was %d", portBindingsLength)
 		}
 
 		if len(portBindings[0].HostIP) == 0 {
-			return fmt.Errorf("Expected host IP to be set, but was empty")
+			return errors.New("expected host IP to be set, but was empty")
 		}
 
 		if len(portBindings[0].HostPort) == 0 {
-			return fmt.Errorf("Expected host port to be set, but was empty")
+			return errors.New("expected host port to be set, but was empty")
 		}
 
 		portBindings, ok = portMap["81/tcp"]
 		if !ok || len(portMap["81/tcp"]) == 0 {
-			return fmt.Errorf("Port 81 on tcp is not set")
+			return errors.New("port 81 on tcp is not set")
 		}
 
 		portBindingsLength = len(portBindings)
 		if portBindingsLength != 1 {
-			return fmt.Errorf("Expected 1 binding on port 81, but was %d", portBindingsLength)
+			return fmt.Errorf("expected 1 binding on port 81, but was %d", portBindingsLength)
 		}
 
 		if len(portBindings[0].HostIP) == 0 {
-			return fmt.Errorf("Expected host IP to be set, but was empty")
+			return errors.New("expected host IP to be set, but was empty")
 		}
 
 		if len(portBindings[0].HostPort) == 0 {
-			return fmt.Errorf("Expected host port to be set, but was empty")
+			return errors.New("expected host port to be set, but was empty")
 		}
 
 		return nil
@@ -1311,7 +1334,7 @@ func TestAccDockerContainer_rm(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if !c.HostConfig.AutoRemove {
-			return fmt.Errorf("Container doesn't have a correct autoremove flag")
+			return errors.New("container doesn't have a correct autoremove flag")
 		}
 
 		return nil
@@ -1340,7 +1363,7 @@ func TestAccDockerContainer_readonly(t *testing.T) {
 
 	testCheck := func(*terraform.State) error {
 		if !c.HostConfig.ReadonlyRootfs {
-			return fmt.Errorf("Container isn't readonly")
+			return errors.New("container isn't readonly")
 		}
 
 		return nil
@@ -1367,19 +1390,19 @@ func TestAccDockerContainer_healthcheck(t *testing.T) {
 	var c types.ContainerJSON
 	testCheck := func(*terraform.State) error {
 		if !reflect.DeepEqual(c.Config.Healthcheck.Test, []string{"CMD", "/bin/true"}) {
-			return fmt.Errorf("Container doesn't have a correct healthcheck test")
+			return errors.New("container doesn't have a correct healthcheck test")
 		}
 		if c.Config.Healthcheck.Interval != 30000000000 {
-			return fmt.Errorf("Container doesn't have a correct healthcheck interval")
+			return errors.New("container doesn't have a correct healthcheck interval")
 		}
 		if c.Config.Healthcheck.Timeout != 5000000000 {
-			return fmt.Errorf("Container doesn't have a correct healthcheck timeout")
+			return errors.New("container doesn't have a correct healthcheck timeout")
 		}
 		if c.Config.Healthcheck.StartPeriod != 15000000000 {
-			return fmt.Errorf("Container doesn't have a correct healthcheck retries")
+			return errors.New("container doesn't have a correct healthcheck retries")
 		}
 		if c.Config.Healthcheck.Retries != 10 {
-			return fmt.Errorf("Container doesn't have a correct healthcheck retries")
+			return errors.New("container doesn't have a correct healthcheck retries")
 		}
 		return nil
 	}
@@ -1449,7 +1472,8 @@ func TestAccDockerContainer_logs(t *testing.T) {
 					resource.TestCheckResourceAttr("docker_container.foo", "attach", "true"),
 					resource.TestCheckResourceAttr("docker_container.foo", "logs", "true"),
 					resource.TestCheckResourceAttr("docker_container.foo", "must_run", "false"),
-					resource.TestCheckResourceAttr("docker_container.foo", "container_logs", "\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00021\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00022\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00023\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00024\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00025\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00026\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00027\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00028\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00029\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u000310\n"),
+					resource.TestCheckResourceAttr("docker_container.foo", "container_logs",
+						"\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00021\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00022\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00023\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00024\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00025\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00026\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00027\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00028\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u00029\n\u0001\u0000\u0000\u0000\u0000\u0000\u0000\u000310\n"),
 				),
 			},
 		},
@@ -1482,16 +1506,16 @@ func TestAccDockerContainer_ipv4address(t *testing.T) {
 		networks := c.NetworkSettings.Networks
 
 		if len(networks) != 1 {
-			return fmt.Errorf("Container doesn't have a correct network")
+			return errors.New("container doesn't have a correct network")
 		}
 		if _, ok := networks["tf-test"]; !ok {
-			return fmt.Errorf("Container doesn't have a correct network")
+			return errors.New("container doesn't have a correct network")
 		}
 		if c.NetworkSettings.Networks["tf-test"].IPAMConfig == nil {
-			return fmt.Errorf("Container doesn't have a correct IPAM config")
+			return errors.New("container doesn't have a correct IPAM config")
 		}
 		if c.NetworkSettings.Networks["tf-test"].IPAMConfig.IPv4Address != "10.0.1.123" {
-			return fmt.Errorf("Container doesn't have a correct IPv4 address")
+			return errors.New("container doesn't have a correct IPv4 address")
 		}
 
 		return nil
@@ -1522,16 +1546,16 @@ func TestAccDockerContainer_ipv6address(t *testing.T) {
 		networks := c.NetworkSettings.Networks
 
 		if len(networks) != 1 {
-			return fmt.Errorf("Container doesn't have a correct network")
+			return errors.New("container doesn't have a correct network")
 		}
 		if _, ok := networks["tf-test"]; !ok {
-			return fmt.Errorf("Container doesn't have a correct network")
+			return errors.New("container doesn't have a correct network")
 		}
 		if c.NetworkSettings.Networks["tf-test"].IPAMConfig == nil {
-			return fmt.Errorf("Container doesn't have a correct IPAM config")
+			return errors.New("container doesn't have a correct IPAM config")
 		}
 		if c.NetworkSettings.Networks["tf-test"].IPAMConfig.IPv6Address != "fd00:0:0:0::123" {
-			return fmt.Errorf("Container doesn't have a correct IPv6 address")
+			return errors.New("container doesn't have a correct IPv6 address")
 		}
 
 		return nil
@@ -1563,19 +1587,19 @@ func TestAccDockerContainer_dualstackaddress(t *testing.T) {
 		networks := c.NetworkSettings.Networks
 
 		if len(networks) != 1 {
-			return fmt.Errorf("Container doesn't have a correct network")
+			return errors.New("container doesn't have a correct network")
 		}
 		if _, ok := networks["tf-test"]; !ok {
-			return fmt.Errorf("Container doesn't have a correct network")
+			return errors.New("container doesn't have a correct network")
 		}
 		if c.NetworkSettings.Networks["tf-test"].IPAMConfig == nil {
-			return fmt.Errorf("Container doesn't have a correct IPAM config")
+			return errors.New("container doesn't have a correct IPAM config")
 		}
 		if c.NetworkSettings.Networks["tf-test"].IPAMConfig.IPv4Address != "10.0.1.123" {
-			return fmt.Errorf("Container doesn't have a correct IPv4 address")
+			return errors.New("container doesn't have a correct IPv4 address")
 		}
 		if c.NetworkSettings.Networks["tf-test"].IPAMConfig.IPv6Address != "fd00:0:0:0::123" {
-			return fmt.Errorf("Container doesn't have a correct IPv6 address")
+			return errors.New("container doesn't have a correct IPv6 address")
 		}
 
 		return nil
@@ -1586,7 +1610,8 @@ func TestAccDockerContainer_dualstackaddress(t *testing.T) {
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: loadTestConfiguration(t, RESOURCE, "docker_container", "testAccDockerContainerNetworksDualStackAddressConfig"),
+				Config: loadTestConfiguration(t, RESOURCE, "docker_container",
+					"testAccDockerContainerNetworksDualStackAddressConfig"),
 				Check: resource.ComposeTestCheckFunc(
 					testAccContainerRunning("docker_container.foo", &c),
 					testCheck,
@@ -1599,17 +1624,17 @@ func TestAccDockerContainer_dualstackaddress(t *testing.T) {
 
 // /////////
 // HELPERS
-// /////////
+// /////////.
 func testAccContainerRunning(resourceName string, cont *types.ContainerJSON) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[resourceName]
 		if !ok {
-			return fmt.Errorf("Resource with name '%s' not found in state", resourceName)
+			return fmt.Errorf("resource with name '%s' not found in state", resourceName)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
@@ -1622,14 +1647,14 @@ func testAccContainerRunning(resourceName string, cont *types.ContainerJSON) res
 			if c.ID == rs.Primary.ID {
 				inspected, err := client.ContainerInspect(ctx, c.ID)
 				if err != nil {
-					return fmt.Errorf("Container could not be inspected: %s", err)
+					return fmt.Errorf("container could not be inspected: %s", err.Error())
 				}
 				*cont = inspected
 				return nil
 			}
 		}
 
-		return fmt.Errorf("Container not found: %s", rs.Primary.ID)
+		return fmt.Errorf("container not found: %s", rs.Primary.ID)
 	}
 }
 
@@ -1638,11 +1663,11 @@ func testAccContainerNotRunning(n string, cont *types.ContainerJSON) resource.Te
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
@@ -1657,12 +1682,12 @@ func testAccContainerNotRunning(n string, cont *types.ContainerJSON) resource.Te
 			if c.ID == rs.Primary.ID {
 				inspected, err := client.ContainerInspect(ctx, c.ID)
 				if err != nil {
-					return fmt.Errorf("Container could not be inspected: %s", err)
+					return fmt.Errorf("container could not be inspected: %s", err.Error())
 				}
 				*cont = inspected
 
 				if cont.State.Running {
-					return fmt.Errorf("Container is running: %s", rs.Primary.ID)
+					return fmt.Errorf("container is running: %s", rs.Primary.ID)
 				}
 			}
 		}
@@ -1671,16 +1696,16 @@ func testAccContainerNotRunning(n string, cont *types.ContainerJSON) resource.Te
 	}
 }
 
-func testAccContainerWaitConditionNotRunning(n string, ct *types.ContainerJSON) resource.TestCheckFunc {
+func testAccContainerWaitConditionNotRunning(n string, _ *types.ContainerJSON) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		ctx := context.Background()
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
@@ -1692,7 +1717,7 @@ func testAccContainerWaitConditionNotRunning(n string, ct *types.ContainerJSON) 
 		select {
 		case err := <-errC:
 			if err != nil {
-				return fmt.Errorf("Container is still running")
+				return errors.New("container is still running")
 			}
 		case <-statusC:
 		}
@@ -1701,28 +1726,28 @@ func testAccContainerWaitConditionNotRunning(n string, ct *types.ContainerJSON) 
 	}
 }
 
-func testAccContainerWaitConditionRemoved(ctx context.Context, n string, ct *types.ContainerJSON) resource.TestCheckFunc {
+func testAccContainerWaitConditionRemoved(ctx context.Context, n string, _ *types.ContainerJSON) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
 		rs, ok := s.RootModule().Resources[n]
 		if !ok {
-			return fmt.Errorf("Not found: %s", n)
+			return fmt.Errorf("not found: %s", n)
 		}
 
 		if rs.Primary.ID == "" {
-			return fmt.Errorf("No ID is set")
+			return errors.New("no ID is set")
 		}
 
 		client := testAccProvider.Meta().(*ProviderConfig).DockerClient
-		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		tCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
-		statusC, errC := client.ContainerWait(ctx, rs.Primary.ID, container.WaitConditionRemoved)
+		statusC, errC := client.ContainerWait(tCtx, rs.Primary.ID, container.WaitConditionRemoved)
 
 		select {
 		case err := <-errC:
 			if err != nil {
 				if !containsIgnorableErrorMessage(err.Error(), "No such container", "is already in progress") {
-					return fmt.Errorf("Container has not been removed: '%s'", err.Error())
+					return fmt.Errorf("container has not been removed: '%s'", err.Error())
 				}
 			}
 		case <-statusC:
@@ -1737,12 +1762,12 @@ func testValueHigherEqualThan(name, key string, value int) resource.TestCheckFun
 		ms := s.RootModule()
 		rs, ok := ms.Resources[name]
 		if !ok {
-			return fmt.Errorf("Not found: %s", name)
+			return fmt.Errorf("not found: %s", name)
 		}
 
 		is := rs.Primary
 		if is == nil {
-			return fmt.Errorf("No primary instance: %s", name)
+			return fmt.Errorf("no primary instance: %s", name)
 		}
 
 		vRaw, ok := is.Attributes[key]
