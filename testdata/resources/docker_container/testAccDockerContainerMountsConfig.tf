@@ -20,4 +20,10 @@ resource "docker_container" "foo_mounts" {
     target = "/mount/tmpfs"
     type   = "tmpfs"
   }
+
+  network_mode    = "bridge"
+  cpu_shares      = 0
+  memory          = 0
+  memory_swap     = 0
+  max_retry_count = 0
 }

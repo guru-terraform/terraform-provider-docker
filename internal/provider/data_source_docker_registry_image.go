@@ -107,7 +107,10 @@ func getImageDigest(registry string, registryWithProtocol string, image, tag, us
 
 	setupHTTPHeadersForRegistryRequests(req, fallback)
 
-	defer req.Body.Close()
+	if req.Body != nil {
+		defer req.Body.Close()
+	}
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("error during registry request: %s", err.Error())
@@ -212,13 +215,19 @@ func getAuthToken(authHeader string, username string, password string, client *h
 		tokenRequest.SetBasicAuth(username, password)
 	}
 
-	defer tokenRequest.Body.Close()
+	if tokenRequest.Body != nil {
+		defer tokenRequest.Body.Close()
+	}
+
 	tokenResponse, err := client.Do(tokenRequest)
 	if err != nil {
 		return "", fmt.Errorf("error during registry request: %s", err.Error())
 	}
 
-	defer tokenRequest.Body.Close()
+	if tokenRequest.Body != nil {
+		defer tokenRequest.Body.Close()
+	}
+
 	if tokenResponse.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("got bad response from registry: %s", tokenResponse.Status)
 	}

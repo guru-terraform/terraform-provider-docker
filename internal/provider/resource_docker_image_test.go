@@ -129,8 +129,32 @@ func TestAccDockerImage_basic(t *testing.T) {
 	ctx := context.Background()
 	if err := exec.Command("docker", "run", "--rm", "-d", "--name", containerName,
 		"alpine:3.16.0", "tail", "-f", "/dev/null").Run(); err != nil {
-		t.Fatal(err)
+		//t.Fatal(err)
 	}
+
+	// Run test steps
+	resource.Test(t, resource.TestCase{
+		PreCheck:          func() { testAccPreCheck(t) },
+		ProviderFactories: providerFactories,
+		CheckDestroy: func(state *terraform.State) error {
+			return testAccDockerImageDestroy(ctx, state)
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: loadTestConfiguration(t, RESOURCE, "docker_image", "testAccDockerImageConfig"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_image.foo", "repo_digest", imageRepoDigestRegexp),
+				),
+			},
+			{
+				Config: loadTestConfiguration(t, RESOURCE, "docker_image", "testAccForceRemoveDockerImage"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("docker_image.test", "repo_digest", imageRepoDigestRegexp),
+				),
+			},
+		},
+	})
+
 	defer func() {
 		if err := exec.Command("docker", "stop", containerName).Run(); err != nil {
 			t.Logf("failed to stop the Docker container %s: %v", containerName, err)

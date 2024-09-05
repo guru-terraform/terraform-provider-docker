@@ -9,4 +9,10 @@ resource "docker_container" "foo" {
   group_add = [
     "users"
   ]
+
+  network_mode    = "bridge"  # Set explicitly
+  cpu_shares      = 0         # Set optional fields explicitly
+  memory          = 0
+  memory_swap     = 0
+  max_retry_count = 0
 }

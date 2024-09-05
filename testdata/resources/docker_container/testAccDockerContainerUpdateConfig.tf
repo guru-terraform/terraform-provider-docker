@@ -12,4 +12,5 @@ resource "docker_container" "foo" {
   cpu_set         = "0-1"
   memory          = 512
   memory_swap     = 2048
+  network_mode    = "bridge"  # Ensure this is explicitly set
 }

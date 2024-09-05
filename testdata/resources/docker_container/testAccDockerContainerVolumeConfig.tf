@@ -15,4 +15,10 @@ resource "docker_container" "foo" {
     container_path = "/tmp/volume"
     read_only      = false
   }
+
+  network_mode    = "bridge"  # Set network_mode explicitly
+  cpu_shares      = 0         # Set optional fields explicitly
+  memory          = 0
+  memory_swap     = 0
+  max_retry_count = 0
 }

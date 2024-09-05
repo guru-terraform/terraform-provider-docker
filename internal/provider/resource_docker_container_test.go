@@ -43,15 +43,16 @@ func TestAccDockerContainer_private_image(t *testing.T) {
 
 	var c types.ContainerJSON
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: fmt.Sprintf(loadTestConfiguration(t, RESOURCE, "docker_container",
 					"testAccDockerContainerPrivateImage"), registry, dockerConfig, image),
 				Check: resource.ComposeTestCheckFunc(
-					testAccContainerRunning("docker_container.foo", &c),
-				),
+					testAccContainerRunning("docker_container.foo", &c)),
 			},
 		},
 		CheckDestroy: func(state *terraform.State) error {
@@ -64,7 +65,9 @@ func TestAccDockerContainer_basic(t *testing.T) {
 	resourceName := "docker_container.foo"
 	var c types.ContainerJSON
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
@@ -113,14 +116,14 @@ func TestAccDockerContainer_init(t *testing.T) {
 	resourceName := "docker_container.fooinit"
 	var c types.ContainerJSON
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
 				Config: loadTestConfiguration(t, RESOURCE, "docker_container", "testAccDockerContainerInitConfig"),
-				Check: resource.ComposeTestCheckFunc(
-					testAccContainerRunning(resourceName, &c),
-				),
+				Check:  resource.ComposeTestCheckFunc(testAccContainerRunning(resourceName, &c)),
 			},
 			{
 				ResourceName:      "docker_container.fooinit",
@@ -154,7 +157,9 @@ func TestAccDockerContainer_init(t *testing.T) {
 func TestAccDockerContainer_basic_network(t *testing.T) {
 	var c types.ContainerJSON
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
@@ -180,7 +185,9 @@ func TestAccDockerContainer_basic_network(t *testing.T) {
 func TestAccDockerContainer_2networks_withmode(t *testing.T) {
 	var c types.ContainerJSON
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
@@ -237,7 +244,9 @@ func TestAccDockerContainer_volume(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
@@ -269,7 +278,9 @@ func TestAccDockerContainer_mounts(t *testing.T) {
 	}
 
 	resource.Test(t, resource.TestCase{
-		PreCheck:          func() { testAccPreCheck(t) },
+		PreCheck: func() {
+			testAccPreCheck(t)
+		},
 		ProviderFactories: providerFactories,
 		Steps: []resource.TestStep{
 			{
@@ -1622,6 +1633,7 @@ func TestAccDockerContainer_dualstackaddress(t *testing.T) {
 	})
 }
 
+// TF_ACC=1
 // /////////
 // HELPERS
 // /////////.

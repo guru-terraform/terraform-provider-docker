@@ -9,4 +9,10 @@ resource "docker_container" "foo" {
   sysctls = {
     "net.ipv4.ip_forward" = "1"
   }
+
+  network_mode    = "bridge"
+  cpu_shares      = 0
+  memory          = 0
+  memory_swap     = 0
+  max_retry_count = 0
 }

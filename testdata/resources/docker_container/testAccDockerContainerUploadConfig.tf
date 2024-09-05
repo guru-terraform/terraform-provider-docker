@@ -4,8 +4,12 @@ resource "docker_image" "foo" {
 }
 
 resource "docker_container" "foo" {
-  name  = "tf-test"
-  image = docker_image.foo.image_id
+  name         = "tf-test"
+  image        = docker_image.foo.image_id
+  cpu_shares   = 0
+  memory       = 0
+  memory_swap  = 0
+  network_mode = "bridge"
 
   upload {
     content    = "foo"
